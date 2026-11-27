@@ -1,0 +1,13 @@
+{
+  "name": "deadwood-dice",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Deadwood Dice — Western Biased-Dice Board Game & Flagsmith Experimentation A/B Test",
+  "scripts": {
+    "install:all": "npm --prefix client install && npm --prefix scripts install",
+    "dev": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "preview": "npm --prefix client run preview",
+    "simulate": "npm --prefix scripts run simulate"
+  }
+}
