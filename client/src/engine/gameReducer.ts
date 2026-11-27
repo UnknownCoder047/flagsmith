@@ -1,5 +1,11 @@
 import type { GameState, LegalMove, RollRecord, TellVariant } from '../types';
-import { applyMove, createInitialPawns, getLegalMoves, hasPlayerWon } from './board';
+import {
+  applyMove,
+  createInitialPawns,
+  getCoordForProgress,
+  getLegalMoves,
+  hasPlayerWon,
+} from './board';
 import { computeDiceRoll, pickBestDealerMove } from './diceAi';
 
 export type GameAction =
@@ -21,8 +27,10 @@ export function createInitialGameState(): GameState {
     currentRoll: null,
     currentDice: [1, 1, 1],
     isRolling: false,
+    dealerHasRolled: false,
     activeTell: false,
     legalMoves: [],
+    lastMove: null,
     rollHistory: [],
     proofLedger: [],
     dealerDialogue: 'Pull up a chair, Marshal. Fresh bones, fair felt—let us play.',
@@ -111,6 +119,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         return {
           ...state,
           isRolling: false,
+          dealerHasRolled: false,
           currentRoll: decision.roll,
           currentDice: decision.dice,
           activeTell: decision.tellShown,
@@ -134,7 +143,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         rollHistory: nextHistory,
         proofLedger: nextProofs,
         dealerDialogue: decision.dialogue ?? state.dealerDialogue,
-        statusBanner: `You rolled ${decision.roll} — click a highlighted rider to move.`,
+        statusBanner: `You rolled ${decision.roll} — click a highlighted rider (or press 1 / 2).`,
         phase: 'player_move',
       };
     }
@@ -150,11 +159,21 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         idx === 0 ? { ...item, moveSummary: summary } : item,
       );
 
+      const moveTrace = {
+        actor: 'player' as const,
+        pawnId: chosen.pawnId,
+        fromCoord: getCoordForProgress('player', chosen.fromProgress),
+        toCoord: getCoordForProgress('player', chosen.toProgress),
+        captured: Boolean(chosen.capturedPawnId),
+        timestamp: Date.now(),
+      };
+
       if (hasPlayerWon(nextPawns, 'player')) {
         return {
           ...state,
           pawns: nextPawns,
           legalMoves: [],
+          lastMove: moveTrace,
           rollHistory: nextHistory,
           phase: 'verdict',
           verdict: 'player_won',
@@ -167,6 +186,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         pawns: nextPawns,
         legalMoves: [],
+        lastMove: moveTrace,
+        dealerHasRolled: false,
         rollHistory: nextHistory,
         lastCaptureFlash: chosen.capturedPawnId
           ? `Knocked Silas's ${chosen.capturedPawnId.toUpperCase()} back to the Corral!`
@@ -177,7 +198,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case 'DEALER_ROLL_START': {
-      if (state.phase !== 'dealer_turn' || state.isRolling) return state;
+      if (state.phase !== 'dealer_turn' || state.isRolling || state.dealerHasRolled) {
+        return state;
+      }
       return {
         ...state,
         isRolling: true,
@@ -209,7 +232,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         tellShown: decision.tellShown,
         rigReason: decision.proof?.reason,
         odds: decision.proof?.odds,
-        moveSummary: bestMove ? undefined : 'No legal move',
+        moveSummary: bestMove ? undefined : 'No legal move (overshoot)',
       };
 
       const nextProofs = decision.proof
@@ -221,6 +244,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         isRolling: false,
+        dealerHasRolled: true,
         currentRoll: decision.roll,
         currentDice: decision.dice,
         activeTell: decision.tellShown,
@@ -228,12 +252,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         rollHistory: nextHistory,
         proofLedger: nextProofs,
         dealerDialogue: decision.dialogue ?? state.dealerDialogue,
-        statusBanner: `Silas rolled ${decision.roll}…`,
+        statusBanner: bestMove
+          ? `Silas rolled ${decision.roll}…`
+          : `Silas rolled ${decision.roll} — overshot the Vault.`,
       };
     }
 
     case 'DEALER_MOVE_COMPLETE': {
-      if (state.phase !== 'dealer_turn') return state;
+      if (state.phase !== 'dealer_turn' || !state.dealerHasRolled) return state;
       const move = state.legalMoves[0] ?? null;
 
       if (!move) {
@@ -241,6 +267,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           ...state,
           turn: state.turn + 1,
           phase: 'player_roll',
+          dealerHasRolled: false,
           legalMoves: [],
           statusBanner: `Turn ${state.turn + 1} — Silas had no move. Your roll.`,
         };
@@ -252,11 +279,22 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         idx === 0 ? { ...item, moveSummary: summary } : item,
       );
 
+      const moveTrace = {
+        actor: 'dealer' as const,
+        pawnId: move.pawnId,
+        fromCoord: getCoordForProgress('dealer', move.fromProgress),
+        toCoord: getCoordForProgress('dealer', move.toProgress),
+        captured: Boolean(move.capturedPawnId),
+        timestamp: Date.now(),
+      };
+
       if (hasPlayerWon(nextPawns, 'dealer')) {
         return {
           ...state,
           pawns: nextPawns,
           legalMoves: [],
+          lastMove: moveTrace,
+          dealerHasRolled: false,
           rollHistory: nextHistory,
           phase: 'verdict',
           verdict: 'dealer_won',
@@ -269,6 +307,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         pawns: nextPawns,
         legalMoves: [],
+        lastMove: moveTrace,
+        dealerHasRolled: false,
         rollHistory: nextHistory,
         lastCaptureFlash: move.capturedPawnId
           ? `Silas knocked your ${move.capturedPawnId.toUpperCase()} back to the Corral!`
@@ -285,6 +325,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         isRolling: false,
+        dealerHasRolled: false,
         legalMoves: [],
         phase: 'verdict',
         verdict: isValidCatch ? 'caught' : 'false_accusation',
