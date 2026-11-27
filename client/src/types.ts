@@ -43,6 +43,15 @@ export interface LegalMove {
   landsOnSafe: boolean;
 }
 
+export interface LastMoveTrace {
+  actor: PlayerId;
+  pawnId: string;
+  fromCoord: [number, number] | null;
+  toCoord: [number, number] | null;
+  captured: boolean;
+  timestamp: number;
+}
+
 export interface RigProof {
   turn: number;
   actor: PlayerId;
@@ -84,8 +93,10 @@ export interface GameState {
   currentRoll: number | null;
   currentDice: [number, number, number];
   isRolling: boolean;
+  dealerHasRolled: boolean;
   activeTell: boolean;
   legalMoves: LegalMove[];
+  lastMove: LastMoveTrace | null;
   rollHistory: RollRecord[];
   proofLedger: RigProof[];
   dealerDialogue: string;

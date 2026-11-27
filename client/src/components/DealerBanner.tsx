@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+import gsap from 'gsap';
 import { History } from 'lucide-react';
 import type { RollRecord } from '../types';
 
@@ -8,40 +10,69 @@ interface DealerBannerProps {
 }
 
 export function DealerBanner({ dialogue, rollHistory, turn }: DealerBannerProps) {
+  const quoteRef = useRef<HTMLParagraphElement | null>(null);
+  const turnBadgeRef = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    if (!quoteRef.current) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    gsap.fromTo(
+      quoteRef.current,
+      { opacity: 0.35, y: 4 },
+      { opacity: 1, y: 0, duration: 0.32, ease: 'power2.out' },
+    );
+  }, [dialogue]);
+
+  useEffect(() => {
+    if (!turnBadgeRef.current) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    gsap.fromTo(
+      turnBadgeRef.current,
+      { scale: 0.85 },
+      { scale: 1, duration: 0.3, ease: 'back.out(2)' },
+    );
+  }, [turn]);
+
   return (
-    <section className="rounded-2xl border border-amber-800/25 bg-white/90 p-4 shadow-md dark:border-amber-500/20 dark:bg-[#1a130f]/95">
-      {/* Silas Vance Portrait + Dialogue */}
+    <section className="plaque-3d rounded-2xl p-4">
+      {/* Silas Vance Medallion + Dialogue */}
       <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-500/40 bg-gradient-to-br from-red-900 via-stone-900 to-stone-950 font-display text-sm font-bold tracking-wider text-amber-300 shadow-inner">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-400/50 bg-[radial-gradient(circle_at_30%_25%,#991b1b_0%,#450a0a_65%,#1c0606_100%)] font-display text-sm font-extrabold tracking-wider text-amber-200 shadow-[0_3px_0_#2a0404,0_6px_12px_rgba(0,0,0,0.45)]">
           SV
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <span className="font-display text-xs font-bold uppercase tracking-wider text-red-800 dark:text-amber-300">
+            <span className="type-broadsheet font-display text-xs uppercase tracking-wider text-red-900 dark:text-amber-200">
               Silas Vance · Riverboat Sharper
             </span>
-            <span className="rounded bg-stone-200/80 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-stone-600 dark:bg-stone-800 dark:text-stone-300">
+            <span
+              ref={turnBadgeRef}
+              className="type-tabular rounded border border-amber-700/30 bg-amber-100/80 px-2 py-0.5 font-mono text-[10px] font-semibold text-amber-950 dark:border-amber-500/25 dark:bg-stone-800/90 dark:text-amber-200"
+            >
               Turn {turn}
             </span>
           </div>
-          <p className="mt-1 text-xs italic leading-relaxed text-stone-700 dark:text-stone-300">
+          <p
+            ref={quoteRef}
+            className="mt-1.5 font-serif text-[13px] italic leading-relaxed text-stone-800 dark:text-stone-200"
+          >
             &ldquo;{dialogue}&rdquo;
           </p>
         </div>
       </div>
 
       {/* Table Roll Log — no spoiler icons so players must genuinely watch patterns & dice */}
-      <div className="mt-3.5 border-t border-stone-200/80 pt-3 dark:border-stone-800/80">
-        <div className="mb-2 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+      <div className="mt-3.5 border-t border-amber-900/15 pt-3 dark:border-amber-500/15">
+        <div className="mb-2 flex items-center justify-between font-sans text-[10px] font-bold uppercase tracking-wider text-stone-600 dark:text-stone-400">
           <span className="inline-flex items-center gap-1">
             <History className="h-3 w-3" />
             Table Roll Log
           </span>
-          <span>{rollHistory.length} rolls</span>
+          <span className="type-tabular font-mono">{rollHistory.length} rolls</span>
         </div>
 
         {rollHistory.length === 0 ? (
-          <p className="py-2 text-center font-mono text-[11px] text-stone-400 dark:text-stone-500">
+          <p className="py-2 text-center font-serif text-xs italic text-stone-500 dark:text-stone-400">
             Watch the rolls closely once the stakes rise…
           </p>
         ) : (
@@ -51,14 +82,14 @@ export function DealerBanner({ dialogue, rollHistory, turn }: DealerBannerProps)
               return (
                 <li
                   key={item.id}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-stone-200/70 bg-stone-50 px-2.5 py-1.5 text-[11px] dark:border-stone-800/80 dark:bg-[#120d0a]"
+                  className="flex items-center justify-between gap-2 rounded-lg border border-amber-900/15 bg-white/70 px-2.5 py-1.5 text-[11px] dark:border-stone-800 dark:bg-[#110b08]"
                 >
                   <div className="flex min-w-0 items-center gap-2">
-                    <span className="font-mono text-[10px] text-stone-400">
+                    <span className="type-tabular font-mono text-[10px] text-stone-500">
                       T{item.turn}
                     </span>
                     <span
-                      className={`font-semibold ${
+                      className={`font-sans font-semibold ${
                         isDealer
                           ? 'text-red-700 dark:text-red-400'
                           : 'text-emerald-700 dark:text-emerald-400'
@@ -67,12 +98,12 @@ export function DealerBanner({ dialogue, rollHistory, turn }: DealerBannerProps)
                       {isDealer ? 'Silas' : 'You'}
                     </span>
                     {item.moveSummary && (
-                      <span className="truncate text-stone-500 dark:text-stone-400">
+                      <span className="truncate font-serif text-xs text-stone-600 dark:text-stone-400">
                         · {item.moveSummary}
                       </span>
                     )}
                   </div>
-                  <span className="inline-flex shrink-0 items-center rounded bg-stone-200/80 px-1.5 py-0.5 font-mono text-[11px] font-bold text-stone-800 dark:bg-stone-800 dark:text-amber-200">
+                  <span className="type-tabular inline-flex shrink-0 items-center rounded border border-amber-800/20 bg-amber-100/80 px-1.5 py-0.5 font-mono text-[11px] font-bold text-stone-900 dark:border-amber-500/20 dark:bg-stone-800 dark:text-amber-200">
                     {item.roll}
                   </span>
                 </li>

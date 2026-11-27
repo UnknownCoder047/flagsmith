@@ -40,19 +40,19 @@ export function ExperimentInspector({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-amber-700/25 bg-white/95 shadow-2xl backdrop-blur dark:border-amber-500/20 dark:bg-[#120d0a]/95">
+    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-amber-800/30 bg-[#f6ebd7]/95 shadow-2xl backdrop-blur dark:border-amber-500/25 dark:bg-[#120b08]/95">
       <div className="mx-auto max-w-6xl px-4 py-3.5 sm:px-6">
         <div className="mb-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <Activity className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-800 dark:text-stone-200">
+            <Activity className="h-4 w-4 text-amber-700 dark:text-amber-400" />
+            <h3 className="font-display text-xs font-bold uppercase tracking-wider text-stone-900 dark:text-amber-100">
               Experiment Inspector
             </h3>
             <span
-              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-sans text-[10px] font-medium ${
                 snapshot.connectedToCloud
                   ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300'
-                  : 'border-stone-200 bg-stone-100 text-stone-600 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-400'
+                  : 'border-stone-300 bg-stone-100 text-stone-600 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-400'
               }`}
             >
               {snapshot.connectedToCloud ? (
@@ -74,7 +74,7 @@ export function ExperimentInspector({
               <button
                 type="button"
                 onClick={onClearLog}
-                className="inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-200"
+                className="inline-flex items-center gap-1 rounded px-2 py-1 font-sans text-[11px] text-stone-600 transition-colors hover:bg-stone-200 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-200"
               >
                 <RotateCcw className="h-3 w-3" />
                 Clear log
@@ -84,7 +84,7 @@ export function ExperimentInspector({
               type="button"
               onClick={onClose}
               aria-label="Close Experiment Inspector"
-              className="rounded p-1 text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-200"
+              className="rounded p-1 text-stone-500 transition-colors hover:bg-stone-200 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-200"
             >
               <X className="h-4 w-4" />
             </button>
@@ -93,20 +93,20 @@ export function ExperimentInspector({
 
         <div className="grid gap-3 md:grid-cols-12">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:col-span-6">
-            <div className="rounded-lg border border-stone-200 bg-stone-50 p-2.5 dark:border-stone-800 dark:bg-stone-900/70">
-              <div className="text-[10px] uppercase tracking-wider text-stone-400 dark:text-stone-500">
+            <div className="rounded-lg border border-amber-900/20 bg-white/75 p-2.5 dark:border-stone-800 dark:bg-stone-900/70">
+              <div className="font-sans text-[10px] uppercase tracking-wider text-stone-500">
                 Identity
               </div>
               <div
                 title={snapshot.identity}
-                className="mt-1 truncate font-mono text-xs font-medium text-stone-800 dark:text-stone-200"
+                className="mt-1 truncate font-mono text-xs font-medium text-stone-900 dark:text-stone-200"
               >
                 {snapshot.identity || '—'}
               </div>
             </div>
 
-            <div className="rounded-lg border border-stone-200 bg-stone-50 p-2.5 dark:border-stone-800 dark:bg-stone-900/70">
-              <div className="text-[10px] uppercase tracking-wider text-stone-400 dark:text-stone-500">
+            <div className="rounded-lg border border-amber-900/20 bg-white/75 p-2.5 dark:border-stone-800 dark:bg-stone-900/70">
+              <div className="font-sans text-[10px] uppercase tracking-wider text-stone-500">
                 sharper_tell_mode
               </div>
               <div className="mt-1 truncate font-mono text-xs font-semibold text-amber-800 dark:text-amber-300">
@@ -114,17 +114,17 @@ export function ExperimentInspector({
               </div>
             </div>
 
-            <div className="rounded-lg border border-stone-200 bg-stone-50 p-2.5 dark:border-stone-800 dark:bg-stone-900/70">
-              <div className="text-[10px] uppercase tracking-wider text-stone-400 dark:text-stone-500">
+            <div className="rounded-lg border border-amber-900/20 bg-white/75 p-2.5 dark:border-stone-800 dark:bg-stone-900/70">
+              <div className="font-sans text-[10px] uppercase tracking-wider text-stone-500">
                 Match State
               </div>
-              <div className="mt-1 truncate font-mono text-xs font-medium text-stone-800 dark:text-stone-200">
+              <div className="type-tabular mt-1 truncate font-mono text-xs font-medium text-stone-900 dark:text-stone-200">
                 T{turn} · {phase}
               </div>
             </div>
 
-            <div className="rounded-lg border border-stone-200 bg-stone-50 p-2.5 dark:border-stone-800 dark:bg-stone-900/70">
-              <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-stone-400 dark:text-stone-500">
+            <div className="rounded-lg border border-amber-900/20 bg-white/75 p-2.5 dark:border-stone-800 dark:bg-stone-900/70">
+              <div className="flex items-center justify-between font-sans text-[10px] uppercase tracking-wider text-stone-500">
                 <span>Rigged Rolls</span>
                 <button
                   type="button"
@@ -139,14 +139,14 @@ export function ExperimentInspector({
                   )}
                 </button>
               </div>
-              <div className="mt-1 font-mono text-xs font-semibold text-stone-800 dark:text-stone-200">
+              <div className="type-tabular mt-1 font-mono text-xs font-semibold text-stone-900 dark:text-stone-200">
                 {revealRigCount ? `${riggedCount} logged` : 'Hidden'}
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg border border-stone-200 bg-stone-50 p-2.5 md:col-span-6 dark:border-stone-800 dark:bg-stone-900/70">
-            <div className="mb-1.5 flex items-center justify-between text-[10px] uppercase tracking-wider text-stone-400 dark:text-stone-500">
+          <div className="rounded-lg border border-amber-900/20 bg-white/75 p-2.5 md:col-span-6 dark:border-stone-800 dark:bg-stone-900/70">
+            <div className="mb-1.5 flex items-center justify-between font-sans text-[10px] uppercase tracking-wider text-stone-500">
               <span>Live Experiment Events ({snapshot.events.length})</span>
               <span className="hidden sm:inline">
                 exposure · cheat_caught · play_again · guardrails
@@ -154,7 +154,7 @@ export function ExperimentInspector({
             </div>
 
             {snapshot.events.length === 0 ? (
-              <p className="py-2 font-mono text-[11px] text-stone-400 dark:text-stone-500">
+              <p className="py-2 font-mono text-[11px] text-stone-500">
                 No events fired yet. Click &quot;Pull Up a Chair · Deal In&quot; to record
                 exposure.
               </p>
@@ -166,9 +166,7 @@ export function ExperimentInspector({
                     className="flex flex-wrap items-center justify-between gap-2 font-mono text-[11px]"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-stone-400 dark:text-stone-500">
-                        {evt.timestamp}
-                      </span>
+                      <span className="text-stone-500">{evt.timestamp}</span>
                       <span
                         className={`rounded border px-1.5 py-0.5 text-[10px] font-medium ${
                           EVENT_BADGE_STYLES[evt.event] || ''
@@ -177,12 +175,12 @@ export function ExperimentInspector({
                         {evt.event}
                       </span>
                       {evt.detail && (
-                        <span className="text-stone-600 dark:text-stone-400">
+                        <span className="text-stone-700 dark:text-stone-400">
                           {evt.detail}
                         </span>
                       )}
                     </div>
-                    <span className="text-[10px] text-stone-400 dark:text-stone-500">
+                    <span className="text-[10px] text-stone-500">
                       {evt.sentToFlagsmith ? 'cloud' : 'local'}
                     </span>
                   </li>
