@@ -49,7 +49,6 @@ export interface LastMoveTrace {
   fromCoord: [number, number] | null;
   toCoord: [number, number] | null;
   captured: boolean;
-  timestamp: number;
 }
 
 export interface RigProof {
@@ -58,6 +57,8 @@ export interface RigProof {
   roll: number;
   reason: string;
   odds: string;
+  /** Probability (0-1] that a fair die would have helped as much on this roll. */
+  chance: number;
 }
 
 export interface RollRecord {
@@ -98,6 +99,8 @@ export interface GameState {
   legalMoves: LegalMove[];
   lastMove: LastMoveTrace | null;
   rollHistory: RollRecord[];
+  /** Roll ids the player marked suspicious; judged against `RollRecord.rigged` on call-out. */
+  flaggedRollIds: string[];
   proofLedger: RigProof[];
   dealerDialogue: string;
   statusBanner: string;

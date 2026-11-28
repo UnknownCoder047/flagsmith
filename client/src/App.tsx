@@ -37,6 +37,7 @@ import {
 } from './lib/flagsmith';
 import { prefersReducedMotion } from './lib/motion';
 
+const newSeed = () => (Math.random() * 2 ** 32) >>> 0;
 
 export default function App() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -171,6 +172,7 @@ export default function App() {
         dispatch({
           type: 'DEALER_ROLL_COMPLETE',
           tellVariant: activeVariantRef.current,
+          seed: newSeed(),
         });
       }, 540);
       return () => window.clearTimeout(finishRollTimer);
@@ -217,6 +219,7 @@ export default function App() {
       dispatch({
         type: 'PLAYER_ROLL_COMPLETE',
         tellVariant: activeVariantRef.current,
+        seed: newSeed(),
       });
     }, 480);
   }, [game.phase, game.isRolling, clearPlayerRollTimer]);

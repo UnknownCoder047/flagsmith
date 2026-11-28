@@ -1,5 +1,11 @@
 import type { LegalMove, PawnState, PlayerId, RigProof, TellVariant } from '../types';
-import { getLegalMoves, getOuterRingIndex, HOME_PROGRESS, isSafeSquare } from './board';
+import {
+  getLegalMoves,
+  getOuterRingIndex,
+  HOME_PROGRESS,
+  isSafeSquare,
+  OUTER_TRACK_LENGTH,
+} from './board';
 
 export interface DiceRollDecision {
   roll: number;
@@ -8,6 +14,21 @@ export interface DiceRollDecision {
   tellShown: boolean;
   proof?: RigProof;
   dialogue?: string;
+}
+
+/** Returns a float in [0, 1). The reducer passes a seeded one so state transitions stay pure. */
+export type Rng = () => number;
+
+/** mulberry32: tiny deterministic PRNG; fine for game dice, not for security. */
+export function createRng(seed: number): Rng {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
 const DICE_BY_ROLL: Record<number, [number, number, number]> = {
@@ -19,34 +40,38 @@ const DICE_BY_ROLL: Record<number, [number, number, number]> = {
   6: [2, 2, 2],
 };
 
-export function rollToDice(roll: number): [number, number, number] {
+export function rollToDice(roll: number, rng: Rng): [number, number, number] {
   const base = DICE_BY_ROLL[roll] ?? [1, 1, 1];
   const copy: [number, number, number] = [...base];
   for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [copy[i], copy[j]] = [copy[j], copy[i]];
   }
   return copy;
 }
 
-function randomFairRoll(): number {
-  return Math.floor(Math.random() * 6) + 1;
+function randomFairRoll(rng: Rng): number {
+  return Math.floor(rng() * 6) + 1;
 }
 
-function formatOdds(priorRigCount: number, isExact: boolean): string {
-  const effectiveCount = priorRigCount + 1;
-  if (effectiveCount === 1) {
-    return isExact ? '16.7% (exact roll)' : '16.7% odds';
-  }
-  if (effectiveCount === 2) {
-    return isExact ? '2.8% combined odds' : '4.5% combined odds';
-  }
-  if (effectiveCount === 3) {
-    return '0.46% streak odds';
-  }
-  const pct = Math.max(0.02, 100 / Math.pow(6, Math.min(effectiveCount, 5)));
-  return `${pct.toFixed(2)}% streak odds`;
+const pct = (p: number): string => {
+  const v = p * 100;
+  return `${v >= 10 ? v.toFixed(1) : v >= 1 ? v.toFixed(2) : v.toFixed(3)}%`;
+};
+
+/**
+ * Real odds: `chance` is the share of the 6 faces a fair die could have shown that would
+ * have helped as much; the combined figure multiplies every rigged roll so far.
+ */
+function formatOdds(prior: RigProof[], chance: number): string {
+  if (prior.length === 0) return `${pct(chance)} chance on fair dice`;
+  const combined = prior.reduce((acc, p) => acc * p.chance, chance);
+  return `${pct(chance)} alone · ${pct(combined)} across ${prior.length + 1} rigged rolls`;
 }
+
+/** Minimum scores for a roll to count as a meaningful edge worth rigging. */
+const DEALER_RIG_MIN_SCORE = 52;
+const PLAYER_SABOTAGE_MIN_SCORE = 68;
 
 const FAIR_QUIPS = [
   'Fair felt, fresh ivory. Roll when you are ready, Marshal.',
@@ -71,15 +96,15 @@ const NEUTRAL_QUIPS = [
   'Pick your rider and keep moving.',
 ];
 
-function pickRandom<T>(items: readonly T[]): T {
-  return items[Math.floor(Math.random() * items.length)];
+function pickRandom<T>(items: readonly T[], rng: Rng): T {
+  return items[Math.floor(rng() * items.length)];
 }
 
 /**
  * Checks whether a pawn at `progress` is within 1..6 tiles ahead of any opponent pawn on the outer ring.
  */
-function isThreatened(pawns: PawnState[], owner: PlayerId, progress: number): boolean {
-  if (progress < 0 || progress >= 28) return false;
+export function isThreatened(pawns: PawnState[], owner: PlayerId, progress: number): boolean {
+  if (progress < 0 || progress >= OUTER_TRACK_LENGTH) return false;
   if (isSafeSquare(owner, progress)) return false;
 
   const myRingIdx = getOuterRingIndex(owner, progress);
@@ -90,8 +115,9 @@ function isThreatened(pawns: PawnState[], owner: PlayerId, progress: number): bo
     if (other.owner !== opponent) return false;
     const oppIdx = getOuterRingIndex(opponent, other.progress);
     if (oppIdx === null) return false;
-    const dist = (myRingIdx - oppIdx + 28) % 28;
-    return dist >= 1 && dist <= 6;
+    const dist = (myRingIdx - oppIdx + OUTER_TRACK_LENGTH) % OUTER_TRACK_LENGTH;
+    // An opponent leaves the ring after its last square, so it cannot reach past it.
+    return dist >= 1 && dist <= 6 && other.progress + dist < OUTER_TRACK_LENGTH;
   });
 }
 
@@ -99,13 +125,12 @@ function scoreDealerRigRoll(
   pawns: PawnState[],
   roll: number,
   preferSubtle: boolean,
-): { score: number; reason: string; isExact: boolean } {
+): { score: number; reason: string } {
   const moves = getLegalMoves(pawns, 'dealer', roll);
-  if (moves.length === 0) return { score: -20, reason: '', isExact: false };
+  if (moves.length === 0) return { score: -20, reason: '' };
 
   let bestScore = 0;
   let reason = '';
-  let isExact = false;
 
   for (const move of moves) {
     const wasThreatened = isThreatened(pawns, 'dealer', move.fromProgress);
@@ -119,14 +144,12 @@ function scoreDealerRigRoll(
       if (score > bestScore) {
         bestScore = score;
         reason = `Silas rolled exact ${roll} to knock your rider back to the Corral`;
-        isExact = true;
       }
     } else if (move.entersHome) {
       const score = 96 - subtletyPenalty;
       if (score > bestScore) {
         bestScore = score;
         reason = `Silas rolled exact ${roll} to slip into the Gold Vault`;
-        isExact = true;
       }
     } else if (wasThreatened && !willBeThreatened) {
       // Very sneaky rig: quietly escapes capture range using a plausible mid roll
@@ -134,26 +157,23 @@ function scoreDealerRigRoll(
       if (score > bestScore) {
         bestScore = score;
         reason = `Silas rolled a convenient ${roll} to slip out of your strike range`;
-        isExact = true;
       }
     } else if (move.landsOnSafe && move.fromProgress >= 0) {
       const score = 68 - subtletyPenalty;
       if (score > bestScore) {
         bestScore = score;
         reason = `Silas rolled exact ${roll} to duck onto a ★ Safe Outpost`;
-        isExact = true;
       }
     } else if (!preferSubtle && roll >= 5 && !willBeThreatened) {
       const score = 46 + roll;
       if (score > bestScore) {
         bestScore = score;
         reason = `Silas rolled a timely ${roll} to pull ahead toward the Vault`;
-        isExact = false;
       }
     }
   }
 
-  return { score: bestScore, reason, isExact };
+  return { score: bestScore, reason };
 }
 
 function scorePlayerSabotageRoll(
@@ -162,20 +182,19 @@ function scorePlayerSabotageRoll(
   captureRoll: number | null,
   homeRoll: number | null,
   safeRoll: number | null,
-): { score: number; reason: string; isExact: boolean } {
+): { score: number; reason: string } {
   const moves = getLegalMoves(pawns, 'player', roll);
 
   if (moves.length === 0) {
     return {
       score: 94,
       reason: `Your bones rolled ${roll}, overshooting the Gold Vault and losing the turn`,
-      isExact: true,
     };
   }
 
   // Never rig a roll that hands the player a capture or Vault entry
   if (moves.some((m) => m.capturedPawnId || m.entersHome)) {
-    return { score: -50, reason: '', isExact: false };
+    return { score: -50, reason: '' };
   }
 
   // Subtle sabotage: 1 tile short of capturing Silas
@@ -183,7 +202,6 @@ function scorePlayerSabotageRoll(
     return {
       score: 92,
       reason: `Your roll (${roll}) landed 1 tile short of knocking Silas off the track`,
-      isExact: true,
     };
   }
 
@@ -192,7 +210,6 @@ function scorePlayerSabotageRoll(
     return {
       score: 88,
       reason: `Your roll (${roll}) came up 1 tile short of the Gold Vault`,
-      isExact: true,
     };
   }
 
@@ -201,7 +218,6 @@ function scorePlayerSabotageRoll(
     return {
       score: 76,
       reason: `Your roll (${roll}) stopped 1 tile short of a ★ Safe Outpost`,
-      isExact: true,
     };
   }
 
@@ -212,12 +228,11 @@ function scorePlayerSabotageRoll(
       return {
         score: 70,
         reason: `Your roll stalled on ${roll}, leaving your rider exposed to Silas`,
-        isExact: false,
       };
     }
   }
 
-  return { score: 0, reason: '', isExact: false };
+  return { score: 0, reason: '' };
 }
 
 /**
@@ -233,9 +248,10 @@ export function computeDiceRoll(params: {
   pawns: PawnState[];
   proofLedger: RigProof[];
   tellVariant: TellVariant;
+  rng: Rng;
 }): DiceRollDecision {
-  const { turn, actor, pawns, proofLedger, tellVariant } = params;
-  const fairRoll = randomFairRoll();
+  const { turn, actor, pawns, proofLedger, tellVariant, rng } = params;
+  const fairRoll = randomFairRoll(rng);
   const priorRigCount = proofLedger.length;
   const lastRigTurn = priorRigCount > 0 ? proofLedger[priorRigCount - 1].turn : -1;
 
@@ -243,10 +259,10 @@ export function computeDiceRoll(params: {
   if (turn <= 3) {
     return {
       roll: fairRoll,
-      dice: rollToDice(fairRoll),
+      dice: rollToDice(fairRoll, rng),
       rigged: false,
       tellShown: false,
-      dialogue: actor === 'dealer' ? pickRandom(FAIR_QUIPS) : undefined,
+      dialogue: actor === 'dealer' ? pickRandom(FAIR_QUIPS, rng) : undefined,
     };
   }
 
@@ -259,10 +275,10 @@ export function computeDiceRoll(params: {
   if (onCooldown) {
     return {
       roll: fairRoll,
-      dice: rollToDice(fairRoll),
+      dice: rollToDice(fairRoll, rng),
       rigged: false,
       tellShown: false,
-      dialogue: actor === 'dealer' ? pickRandom(NEUTRAL_QUIPS) : undefined,
+      dialogue: actor === 'dealer' ? pickRandom(NEUTRAL_QUIPS, rng) : undefined,
     };
   }
 
@@ -276,22 +292,24 @@ export function computeDiceRoll(params: {
     biasProbability = 0.85;
   }
 
-  if (Math.random() >= biasProbability) {
+  if (rng() >= biasProbability) {
     return {
       roll: fairRoll,
-      dice: rollToDice(fairRoll),
+      dice: rollToDice(fairRoll, rng),
       rigged: false,
       tellShown: false,
-      dialogue: actor === 'dealer' ? pickRandom(NEUTRAL_QUIPS) : undefined,
+      dialogue: actor === 'dealer' ? pickRandom(NEUTRAL_QUIPS, rng) : undefined,
     };
   }
 
   if (actor === 'dealer') {
     let bestRoll = fairRoll;
-    let bestEval = { score: 0, reason: '', isExact: false };
+    let bestEval = { score: 0, reason: '' };
+    let helpfulRolls = 0;
 
     for (let r = 1; r <= 6; r++) {
       const evaluation = scoreDealerRigRoll(pawns, r, preferSubtle);
+      if (evaluation.score >= DEALER_RIG_MIN_SCORE) helpfulRolls++;
       if (evaluation.score > bestEval.score) {
         bestEval = evaluation;
         bestRoll = r;
@@ -299,12 +317,13 @@ export function computeDiceRoll(params: {
     }
 
     // Only log as rigged if Silas actually gained a meaningful tactical edge
-    if (bestEval.score >= 52 && bestRoll !== fairRoll) {
-      const odds = formatOdds(priorRigCount, bestEval.isExact);
+    if (bestEval.score >= DEALER_RIG_MIN_SCORE && bestRoll !== fairRoll) {
+      const chance = helpfulRolls / 6;
+      const odds = formatOdds(proofLedger, chance);
       const tellShown = tellVariant === 'subtle_tells';
       return {
         roll: bestRoll,
-        dice: rollToDice(bestRoll),
+        dice: rollToDice(bestRoll, rng),
         rigged: true,
         tellShown,
         proof: {
@@ -313,8 +332,9 @@ export function computeDiceRoll(params: {
           roll: bestRoll,
           reason: bestEval.reason,
           odds,
+          chance,
         },
-        dialogue: tellShown ? pickRandom(SUBTLE_TELL_QUIPS) : pickRandom(NEUTRAL_QUIPS),
+        dialogue: tellShown ? pickRandom(SUBTLE_TELL_QUIPS, rng) : pickRandom(NEUTRAL_QUIPS, rng),
       };
     }
   } else {
@@ -332,22 +352,25 @@ export function computeDiceRoll(params: {
     }
 
     let bestSabotageRoll = fairRoll;
-    let bestEval = { score: 0, reason: '', isExact: false };
+    let bestEval = { score: 0, reason: '' };
+    let helpfulRolls = 0;
 
     for (let r = 1; r <= 6; r++) {
       const evaluation = scorePlayerSabotageRoll(pawns, r, captureRoll, homeRoll, safeRoll);
+      if (evaluation.score >= PLAYER_SABOTAGE_MIN_SCORE) helpfulRolls++;
       if (evaluation.score > bestEval.score) {
         bestEval = evaluation;
         bestSabotageRoll = r;
       }
     }
 
-    if (bestEval.score >= 68 && bestSabotageRoll !== fairRoll) {
-      const odds = formatOdds(priorRigCount, bestEval.isExact);
+    if (bestEval.score >= PLAYER_SABOTAGE_MIN_SCORE && bestSabotageRoll !== fairRoll) {
+      const chance = helpfulRolls / 6;
+      const odds = formatOdds(proofLedger, chance);
       const tellShown = tellVariant === 'subtle_tells';
       return {
         roll: bestSabotageRoll,
-        dice: rollToDice(bestSabotageRoll),
+        dice: rollToDice(bestSabotageRoll, rng),
         rigged: true,
         tellShown,
         proof: {
@@ -356,18 +379,19 @@ export function computeDiceRoll(params: {
           roll: bestSabotageRoll,
           reason: bestEval.reason,
           odds,
+          chance,
         },
-        dialogue: tellShown ? pickRandom(SUBTLE_TELL_QUIPS) : undefined,
+        dialogue: tellShown ? pickRandom(SUBTLE_TELL_QUIPS, rng) : undefined,
       };
     }
   }
 
   return {
     roll: fairRoll,
-    dice: rollToDice(fairRoll),
+    dice: rollToDice(fairRoll, rng),
     rigged: false,
     tellShown: false,
-    dialogue: actor === 'dealer' ? pickRandom(NEUTRAL_QUIPS) : undefined,
+    dialogue: actor === 'dealer' ? pickRandom(NEUTRAL_QUIPS, rng) : undefined,
   };
 }
 
