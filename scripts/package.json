@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "simulate": "tsx simulate-traffic.ts"
+    "simulate": "tsx simulate-traffic.ts",
+    "check": "tsx game-check.ts"
   },
   "dependencies": {
     "@flagsmith/nodejs": "^9.1.0",
