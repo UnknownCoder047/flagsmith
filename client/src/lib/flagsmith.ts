@@ -11,7 +11,8 @@
  *      - Primary:    `cheat_caught`
  *      - Secondary:  `play_again_clicked`
  *      - Guardrail1: `false_accusation`
- *      - Guardrail2: `match_abandoned`
+ *      - Guardrail2: `match_abandoned` (hidden > 30s, page closed, or forfeit)
+ *      - Denominator: `match_completed` (any verdict)
  */
 
 import flagsmith from '@flagsmith/flagsmith';
@@ -35,15 +36,11 @@ const DEMO_FALLBACK_MAP: Record<DemoIdentity, TellVariant> = {
   demo_tells: 'subtle_tells',
 };
 
-interface FlagsmithExperimentClient {
-  getExperimentFlag?: (featureName: string) => { value?: unknown; enabled?: boolean } | unknown;
-  trackEvent?: (
-    eventName: string,
-    opts?: { value?: number; metadata?: Record<string, string | number | boolean> },
-  ) => void;
-}
+/** Identities already exposed this session: one `$flag_exposure` per identity, not per match. */
+const exposedIdentities = new Set<string>();
 
-const typedFlagsmith = flagsmith as typeof flagsmith & FlagsmithExperimentClient;
+/** Judge-demo identities share the real environment: their events stay local (inspector only). */
+const isDemoIdentity = (identity: string): boolean => identity in DEMO_FALLBACK_MAP;
 
 export interface FlagsmithStateSnapshot {
   initialized: boolean;
@@ -252,22 +249,22 @@ export async function switchIdentity(nextIdentity: string): Promise<TellVariant>
 }
 
 export function triggerExperimentExposure(): TellVariant {
+  const identity = state.identity;
+  if (exposedIdentities.has(identity)) return state.variant;
+  exposedIdentities.add(identity);
+
   let sentToCloud = false;
   let activeVariant = state.variant;
 
-  if (state.connectedToCloud) {
+  if (state.connectedToCloud && isDemoIdentity(identity)) {
+    // Plain read: getExperimentFlag would record a real `$flag_exposure` for a fake player.
+    activeVariant = coerceVariant(flagsmith.getValue(FLAG_KEY), identity);
+  } else if (state.connectedToCloud) {
     try {
-      if (typeof typedFlagsmith.getExperimentFlag === 'function') {
-        const result = typedFlagsmith.getExperimentFlag(FLAG_KEY);
-        const rawValue =
-          result && typeof result === 'object' && 'value' in result
-            ? (result as { value?: unknown }).value
-            : result;
-        activeVariant = coerceVariant(rawValue ?? flagsmith.getValue(FLAG_KEY), state.identity);
-        sentToCloud = true;
-      } else {
-        activeVariant = coerceVariant(flagsmith.getValue(FLAG_KEY), state.identity);
-      }
+      const flag = flagsmith.getExperimentFlag(FLAG_KEY);
+      activeVariant = coerceVariant(flag?.value ?? flagsmith.getValue(FLAG_KEY), identity);
+      // SDK only emits `$flag_exposure` when the identity is enrolled in a running experiment.
+      sentToCloud = flag?.experiment?.inExperiment === true;
     } catch (err) {
       console.warn('[Deadwood/Flagsmith] getExperimentFlag failed:', err);
     }
@@ -280,7 +277,9 @@ export function triggerExperimentExposure(): TellVariant {
   pushInspectorEvent(
     'exposure',
     sentToCloud,
-    `flag=${FLAG_KEY} variant=${activeVariant}`,
+    `flag=${FLAG_KEY} variant=${activeVariant}${
+      sentToCloud ? '' : isDemoIdentity(identity) ? ' (demo identity: not sent)' : ' (not enrolled / local)'
+    }`,
   );
   return activeVariant;
 }
@@ -292,21 +291,26 @@ function sendMetricEvent(
 ): void {
   let sentToCloud = false;
 
-  if (state.connectedToCloud && typeof typedFlagsmith.trackEvent === 'function') {
+  if (state.connectedToCloud && !isDemoIdentity(state.identity)) {
     try {
-      typedFlagsmith.trackEvent(eventName, {
+      flagsmith.trackEvent(eventName, {
         metadata: {
           variant: state.variant,
+          // Demo identities share the real environment; this lets analysis exclude them.
+          demo: state.isDemoMode,
           ...metadata,
         },
       });
+      // Push now: a hidden or closing tab may never reach the SDK's flush timer.
+      void flagsmith.flushEvents().catch(() => undefined);
       sentToCloud = true;
     } catch (err) {
       console.warn(`[Deadwood/Flagsmith] trackEvent(${eventName}) failed:`, err);
     }
   }
 
-  pushInspectorEvent(eventName, sentToCloud, detail);
+  const note = state.connectedToCloud && isDemoIdentity(state.identity) ? ' (demo identity: not sent)' : '';
+  pushInspectorEvent(eventName, sentToCloud, detail + note);
 }
 
 export function trackCheatCaught(turn: number, riggedCount: number): void {
@@ -333,8 +337,16 @@ export function trackFalseAccusation(turn: number, riggedCount: number): void {
   );
 }
 
+export function trackMatchCompleted(verdict: string, turn: number, riggedCount: number): void {
+  sendMetricEvent(
+    'match_completed',
+    { verdict, turn, rigged_count: riggedCount },
+    `verdict=${verdict} turn=${turn} rigged=${riggedCount}`,
+  );
+}
+
 export function trackMatchAbandoned(
-  reason: 'tab_hidden' | 'forfeit',
+  reason: 'tab_hidden' | 'page_closed' | 'forfeit',
   turn: number,
   elapsedMs: number,
 ): void {

@@ -2,13 +2,16 @@ import { useState } from 'react';
 import { BookOpen, ChevronDown, ChevronUp, Dices, Gavel, Shield, Vault } from 'lucide-react';
 
 export function InGameRulesCard() {
-  const [collapsed, setCollapsed] = useState(false);
+  // Collapsed by default on phones so the dice tray stays near the board, above the fold.
+  const [collapsed, setCollapsed] = useState(() => window.matchMedia('(max-width: 1023px)').matches);
 
   return (
     <section className="plaque-3d mx-auto mt-4 w-full max-w-[515px] rounded-2xl p-3.5">
       <button
         type="button"
         onClick={() => setCollapsed((prev) => !prev)}
+        aria-expanded={!collapsed}
+        aria-controls="in-game-rules-body"
         className="group flex w-full items-center justify-between text-left"
       >
         <div className="flex items-center gap-2">
@@ -28,7 +31,7 @@ export function InGameRulesCard() {
       </button>
 
       {!collapsed && (
-        <div className="mt-3 grid gap-2.5 border-t border-amber-900/15 pt-3 font-serif text-xs leading-relaxed text-stone-700 sm:grid-cols-2 dark:border-amber-500/15 dark:text-stone-300">
+        <div id="in-game-rules-body" className="mt-3 grid gap-2.5 border-t border-amber-900/15 pt-3 font-serif text-xs leading-relaxed text-stone-700 sm:grid-cols-2 dark:border-amber-500/15 dark:text-stone-300">
           <div className="flex items-start gap-2">
             <Dices className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-700 dark:text-amber-400" />
             <div>
@@ -65,7 +68,7 @@ export function InGameRulesCard() {
               <span className="font-sans text-[11px] font-bold text-stone-950 dark:text-amber-100">
                 4. Catch the Cheat:
               </span>{' '}
-              Turns 1–3 are honest. Call out loaded dice after <strong>2+ rigged rolls</strong> to win instantly—accuse too early and you lose!
+              Silas plays straight at first. Flag <strong>2+ suspicious rolls</strong> in the roll log, then call out. Most flags must be truly loaded to win—wrong flags lose!
             </div>
           </div>
         </div>

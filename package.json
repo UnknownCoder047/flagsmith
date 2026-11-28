@@ -9,6 +9,7 @@
     "build": "npm --prefix client run build",
     "preview": "npm --prefix client run preview",
     "simulate": "npm --prefix scripts run simulate",
-    "check": "npm --prefix scripts run check"
+    "check": "npm --prefix scripts run check",
+    "lint": "npm --prefix client run lint"
   }
 }

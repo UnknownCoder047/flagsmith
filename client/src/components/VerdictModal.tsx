@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { Award, RotateCcw, ShieldAlert, Skull, Sparkles } from 'lucide-react';
+import { useDialog } from '../lib/useDialog';
 import type { RigProof, VerdictType } from '../types';
+import { prefersReducedMotion } from '../lib/motion';
 
 interface VerdictModalProps {
   verdict: VerdictType | null;
@@ -39,7 +41,7 @@ const VERDICT_META: Record<
   },
   false_accusation: {
     title: 'Bad Call — Instant Defeat',
-    subtitle: 'You accused a clean table before enough rigged rolls were on the books.',
+    subtitle: 'Your flagged rolls were mostly honest, so the accusation fell flat.',
     badge: 'False Accusation',
     accentClass:
       'border-amber-600/40 bg-amber-500/15 text-amber-900 dark:text-amber-300',
@@ -62,10 +64,11 @@ export function VerdictModal({
   onPlayAgain,
 }: VerdictModalProps) {
   const modalRef = useRef<HTMLDivElement | null>(null);
+  useDialog(modalRef, verdict !== null);
 
   useEffect(() => {
     if (!verdict || !modalRef.current) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (prefersReducedMotion()) return;
     gsap.fromTo(
       modalRef.current,
       { opacity: 0, y: 24, scale: 0.92, rotateX: 12 },

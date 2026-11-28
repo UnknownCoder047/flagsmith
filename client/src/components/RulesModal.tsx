@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { Dices, Gavel, Shield, Sparkles, X } from 'lucide-react';
+import { useDialog } from '../lib/useDialog';
+import { prefersReducedMotion } from '../lib/motion';
 
 interface RulesModalProps {
   open: boolean;
@@ -9,10 +11,11 @@ interface RulesModalProps {
 
 export function RulesModal({ open, onClose }: RulesModalProps) {
   const cardRef = useRef<HTMLDivElement | null>(null);
+  useDialog(cardRef, open, onClose);
 
   useEffect(() => {
     if (!open || !cardRef.current) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (prefersReducedMotion()) return;
     gsap.fromTo(
       cardRef.current,
       { opacity: 0, y: 20, scale: 0.94, rotateX: 10 },
@@ -92,7 +95,7 @@ export function RulesModal({ open, onClose }: RulesModalProps) {
                 3. Watch for Silas&apos;s Loaded Dice
               </p>
               <p className="mt-0.5 font-serif text-[13px] text-stone-600 dark:text-stone-400">
-                Turns 1–3 are 100% honest. Once the pot heats up, Silas starts quietly
+                The table starts square. Once the pot heats up, Silas starts quietly
                 nudging the dice—slipping out of danger, landing exact knockbacks, or
                 leaving you 1 tile short.
               </p>
@@ -106,9 +109,9 @@ export function RulesModal({ open, onClose }: RulesModalProps) {
                 4. Call Out Loaded Dice to Win Instantly
               </p>
               <p className="mt-0.5 font-serif text-[13px] text-stone-600 dark:text-stone-400">
-                Call out Silas once at least <strong>2 rigged rolls</strong> have happened
-                for an instant win. Call too early (0–1 rigged rolls) and you forfeit the
-                pot!
+                Flag at least <strong>2 suspicious rolls</strong> in the Table Roll Log, then
+                call out Silas. If most of your flags are truly loaded rolls you win
+                instantly. Flag honest rolls and you forfeit the pot!
               </p>
             </div>
           </div>

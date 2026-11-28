@@ -1,4 +1,4 @@
-import type { GameState, LegalMove, RollRecord, TellVariant } from '../types';
+import type { GameState, LegalMove, PlayerId, RollRecord, TellVariant } from '../types';
 import {
   applyMove,
   createInitialPawns,
@@ -6,16 +6,20 @@ import {
   getLegalMoves,
   hasPlayerWon,
 } from './board';
-import { computeDiceRoll, pickBestDealerMove } from './diceAi';
+import { computeDiceRoll, createRng, pickBestDealerMove } from './diceAi';
+
+/** Flagged rolls that must be truly rigged (and outnumber wrong flags) for a valid call-out. */
+export const MIN_FLAGGED_HITS = 2;
 
 export type GameAction =
   | { type: 'START_MATCH'; now: number }
   | { type: 'PLAYER_ROLL_START' }
-  | { type: 'PLAYER_ROLL_COMPLETE'; tellVariant: TellVariant }
+  | { type: 'PLAYER_ROLL_COMPLETE'; tellVariant: TellVariant; seed: number }
   | { type: 'PLAYER_MOVE_PAWN'; pawnId: string }
   | { type: 'DEALER_ROLL_START' }
-  | { type: 'DEALER_ROLL_COMPLETE'; tellVariant: TellVariant }
+  | { type: 'DEALER_ROLL_COMPLETE'; tellVariant: TellVariant; seed: number }
   | { type: 'DEALER_MOVE_COMPLETE' }
+  | { type: 'TOGGLE_FLAG_ROLL'; rollId: string }
   | { type: 'CALL_OUT_DEALER' }
   | { type: 'RESET_TO_LANDING' };
 
@@ -32,6 +36,7 @@ export function createInitialGameState(): GameState {
     legalMoves: [],
     lastMove: null,
     rollHistory: [],
+    flaggedRollIds: [],
     proofLedger: [],
     dealerDialogue: 'Pull up a chair, Marshal. Fresh bones, fair felt—let us play.',
     statusBanner: 'Pull up a chair to start your high-stakes match against Silas Vance.',
@@ -58,6 +63,28 @@ function summarizeMove(
     return `${actorLabel} rode ${name} onto the track`;
   }
   return `${actorLabel} moved ${name}`;
+}
+
+/** Shared by both sides: apply a move and build the state fields every move changes. */
+function commitMove(state: GameState, actor: PlayerId, move: LegalMove) {
+  const pawns = applyMove(state.pawns, move);
+  const summary = summarizeMove(actor === 'player' ? 'You' : 'Silas', move, state.pawns);
+  const patch = {
+    pawns,
+    legalMoves: [],
+    dealerHasRolled: false,
+    rollHistory: state.rollHistory.map((item, idx) =>
+      idx === 0 ? { ...item, moveSummary: summary } : item,
+    ),
+    lastMove: {
+      actor,
+      pawnId: move.pawnId,
+      fromCoord: getCoordForProgress(actor, move.fromProgress),
+      toCoord: getCoordForProgress(actor, move.toProgress),
+      captured: Boolean(move.capturedPawnId),
+    },
+  } satisfies Partial<GameState>;
+  return { patch, summary, won: hasPlayerWon(pawns, actor) };
 }
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
@@ -92,12 +119,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         pawns: state.pawns,
         proofLedger: state.proofLedger,
         tellVariant: action.tellVariant,
+        rng: createRng(action.seed),
       });
 
       const legalMoves = getLegalMoves(state.pawns, 'player', decision.roll);
 
       const record: RollRecord = {
-        id: `r-${state.turn}-p-${Date.now()}`,
+        id: `r-${state.turn}-p`,
         turn: state.turn,
         actor: 'player',
         roll: decision.roll,
@@ -113,7 +141,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ? [...state.proofLedger, decision.proof]
         : state.proofLedger;
 
-      const nextHistory = [record, ...state.rollHistory].slice(0, 24);
+      const nextHistory = [record, ...state.rollHistory];
 
       if (legalMoves.length === 0) {
         return {
@@ -153,28 +181,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const chosen = state.legalMoves.find((m) => m.pawnId === action.pawnId);
       if (!chosen) return state;
 
-      const nextPawns = applyMove(state.pawns, chosen);
-      const summary = summarizeMove('You', chosen, state.pawns);
-      const nextHistory = state.rollHistory.map((item, idx) =>
-        idx === 0 ? { ...item, moveSummary: summary } : item,
-      );
+      const { patch, summary, won } = commitMove(state, 'player', chosen);
 
-      const moveTrace = {
-        actor: 'player' as const,
-        pawnId: chosen.pawnId,
-        fromCoord: getCoordForProgress('player', chosen.fromProgress),
-        toCoord: getCoordForProgress('player', chosen.toProgress),
-        captured: Boolean(chosen.capturedPawnId),
-        timestamp: Date.now(),
-      };
-
-      if (hasPlayerWon(nextPawns, 'player')) {
+      if (won) {
         return {
           ...state,
-          pawns: nextPawns,
-          legalMoves: [],
-          lastMove: moveTrace,
-          rollHistory: nextHistory,
+          ...patch,
           phase: 'verdict',
           verdict: 'player_won',
           statusBanner: 'Both of your riders reached the Gold Vault!',
@@ -184,11 +196,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       return {
         ...state,
-        pawns: nextPawns,
-        legalMoves: [],
-        lastMove: moveTrace,
-        dealerHasRolled: false,
-        rollHistory: nextHistory,
+        ...patch,
         lastCaptureFlash: chosen.capturedPawnId
           ? `Knocked Silas's ${chosen.capturedPawnId.toUpperCase()} back to the Corral!`
           : null,
@@ -218,12 +226,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         pawns: state.pawns,
         proofLedger: state.proofLedger,
         tellVariant: action.tellVariant,
+        rng: createRng(action.seed),
       });
 
       const bestMove = pickBestDealerMove(state.pawns, decision.roll);
 
       const record: RollRecord = {
-        id: `r-${state.turn}-d-${Date.now()}`,
+        id: `r-${state.turn}-d`,
         turn: state.turn,
         actor: 'dealer',
         roll: decision.roll,
@@ -239,7 +248,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ? [...state.proofLedger, decision.proof]
         : state.proofLedger;
 
-      const nextHistory = [record, ...state.rollHistory].slice(0, 24);
+      const nextHistory = [record, ...state.rollHistory];
 
       return {
         ...state,
@@ -273,29 +282,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         };
       }
 
-      const nextPawns = applyMove(state.pawns, move);
-      const summary = summarizeMove('Silas', move, state.pawns);
-      const nextHistory = state.rollHistory.map((item, idx) =>
-        idx === 0 ? { ...item, moveSummary: summary } : item,
-      );
+      const { patch, summary, won } = commitMove(state, 'dealer', move);
 
-      const moveTrace = {
-        actor: 'dealer' as const,
-        pawnId: move.pawnId,
-        fromCoord: getCoordForProgress('dealer', move.fromProgress),
-        toCoord: getCoordForProgress('dealer', move.toProgress),
-        captured: Boolean(move.capturedPawnId),
-        timestamp: Date.now(),
-      };
-
-      if (hasPlayerWon(nextPawns, 'dealer')) {
+      if (won) {
         return {
           ...state,
-          pawns: nextPawns,
-          legalMoves: [],
-          lastMove: moveTrace,
-          dealerHasRolled: false,
-          rollHistory: nextHistory,
+          ...patch,
           phase: 'verdict',
           verdict: 'dealer_won',
           statusBanner: 'Silas reached the Gold Vault first and took the pot.',
@@ -305,11 +297,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       return {
         ...state,
-        pawns: nextPawns,
-        legalMoves: [],
-        lastMove: moveTrace,
-        dealerHasRolled: false,
-        rollHistory: nextHistory,
+        ...patch,
         lastCaptureFlash: move.capturedPawnId
           ? `Silas knocked your ${move.capturedPawnId.toUpperCase()} back to the Corral!`
           : null,
@@ -319,9 +307,23 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
 
+    case 'TOGGLE_FLAG_ROLL': {
+      if (state.phase === 'landing' || state.phase === 'verdict') return state;
+      if (!state.rollHistory.some((r) => r.id === action.rollId)) return state;
+      return {
+        ...state,
+        flaggedRollIds: state.flaggedRollIds.includes(action.rollId)
+          ? state.flaggedRollIds.filter((id) => id !== action.rollId)
+          : [...state.flaggedRollIds, action.rollId],
+      };
+    }
+
     case 'CALL_OUT_DEALER': {
       if (state.phase === 'landing' || state.phase === 'verdict') return state;
-      const isValidCatch = state.proofLedger.length >= 2;
+      // Evidence-based: judged on the rolls the player flagged, not on the hidden rig count.
+      const flagged = state.rollHistory.filter((r) => state.flaggedRollIds.includes(r.id));
+      const hits = flagged.filter((r) => r.rigged).length;
+      const isValidCatch = hits >= MIN_FLAGGED_HITS && hits > flagged.length - hits;
       return {
         ...state,
         isRolling: false,

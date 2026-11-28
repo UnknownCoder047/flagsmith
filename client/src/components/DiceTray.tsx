@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { Dices } from 'lucide-react';
 import type { MatchPhase } from '../types';
+import { prefersReducedMotion } from '../lib/motion';
 
 interface DiceTrayProps {
   phase: MatchPhase;
@@ -55,7 +56,7 @@ export function DiceTray({
 
   // GSAP 3D physics roll + weighted center-bone hesitation tell
   useEffect(() => {
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const prefersReduced = prefersReducedMotion();
     const ctx = gsap.context(() => {
       if (isRolling) {
         wasRollingRef.current = true;
@@ -332,15 +333,20 @@ export function DiceTray({
         })}
       </div>
 
-      <p className="mt-3 text-center font-serif text-sm italic leading-snug text-stone-700 dark:text-stone-300">
-        {statusBanner}
-      </p>
+      <div aria-live="polite">
+        {activeTell && !isRolling && (
+          <p className="sr-only">The center bone glints and hesitates as it settles.</p>
+        )}
+        <p className="mt-3 text-center font-serif text-sm italic leading-snug text-stone-700 dark:text-stone-300">
+          {statusBanner}
+        </p>
 
-      {lastCaptureFlash && (
-        <div className="mt-2 rounded-lg border border-red-500/40 bg-red-600/15 px-3 py-1.5 text-center font-sans text-xs font-semibold text-red-800 dark:text-red-200">
-          {lastCaptureFlash}
-        </div>
-      )}
+        {lastCaptureFlash && (
+          <div className="mt-2 rounded-lg border border-red-500/40 bg-red-600/15 px-3 py-1.5 text-center font-sans text-xs font-semibold text-red-800 dark:text-red-200">
+            {lastCaptureFlash}
+          </div>
+        )}
+      </div>
 
       <button
         type="button"
