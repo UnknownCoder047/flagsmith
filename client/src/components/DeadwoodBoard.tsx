@@ -9,6 +9,7 @@ import {
   HOME_PROGRESS,
 } from '../engine/board';
 import { prefersReducedMotion } from '../lib/motion';
+import { PawnToken } from './PawnToken';
 
 interface DeadwoodBoardProps {
   pawns: PawnState[];
@@ -180,61 +181,17 @@ export function DeadwoodBoard({
     pawnsByCell.set(key, existing);
   }
 
-  const renderPawnToken = (pawn: PawnState, compact = false) => {
-    const move = legalMoveByPawn.get(pawn.id);
-    const isClickable = Boolean(move);
-    const isPlayer = pawn.owner === 'player';
-    const isJustMoved = lastMove?.pawnId === pawn.id;
-
-    const sizeClass = compact ? 'h-6 w-6 text-[10px]' : 'h-7 w-7 sm:h-8 sm:w-8 text-[11px]';
-
-    // Physical 3D stacked casino/marshal chip styling
-    const chip3DClass = isPlayer
-      ? 'bg-[radial-gradient(circle_at_30%_25%,#34d399_0%,#059669_55%,#064e3b_100%)] text-white border-emerald-200/85 shadow-[0_4px_0_#022c22,0_7px_12px_rgba(0,0,0,0.55),inset_0_1px_1px_rgba(255,255,255,0.6)]'
-      : 'bg-[radial-gradient(circle_at_30%_25%,#f87171_0%,#b91c1c_55%,#450a0a_100%)] text-amber-100 border-amber-300/80 shadow-[0_4px_0_#3b0707,0_7px_12px_rgba(0,0,0,0.58),inset_0_1px_1px_rgba(255,230,190,0.5)]';
-
-    if (isClickable) {
-      return (
-        <button
-          key={pawn.id}
-          data-pawn-id={pawn.id}
-          type="button"
-          onClick={() => {
-            setHoveredPawnId(null);
-            onSelectPawn(pawn.id);
-          }}
-          onMouseEnter={() => setHoveredPawnId(pawn.id)}
-          onMouseLeave={() => setHoveredPawnId(null)}
-          title={
-            move?.capturedPawnId
-              ? `Move ${pawn.label} to knock ${move.capturedPawnId.toUpperCase()} back to the Corral!`
-              : move?.entersHome
-                ? `Move ${pawn.label} into the Gold Vault!`
-                : `Move ${pawn.label}`
-          }
-          style={{ transform: 'translateZ(14px)' }}
-          className={`type-tabular relative z-20 flex items-center justify-center rounded-full border-2 font-mono font-bold transition-transform hover:-translate-y-1 hover:scale-110 active:translate-y-0.5 focus:outline-none animate-pawn-pulse ring-2 ring-amber-300 ${sizeClass} ${chip3DClass}`}
-        >
-          <span className="pointer-events-none absolute inset-[2px] rounded-full border border-dashed border-white/35" />
-          <span className="relative drop-shadow-[0_1px_1px_rgba(0,0,0,0.75)]">{pawn.label}</span>
-        </button>
-      );
-    }
-
-    return (
-      <div
-        key={pawn.id}
-        data-pawn-id={pawn.id}
-        style={{ transform: 'translateZ(8px)' }}
-        className={`type-tabular relative z-10 flex items-center justify-center rounded-full border font-mono font-bold transition-transform ${sizeClass} ${chip3DClass} ${
-          isJustMoved ? 'ring-2 ring-amber-300/90 scale-105' : ''
-        }`}
-      >
-        <span className="pointer-events-none absolute inset-[2px] rounded-full border border-dashed border-white/25" />
-        <span className="relative drop-shadow-[0_1px_1px_rgba(0,0,0,0.75)]">{pawn.label}</span>
-      </div>
-    );
-  };
+  const renderPawnToken = (pawn: PawnState, compact = false) => (
+    <PawnToken
+      key={pawn.id}
+      pawn={pawn}
+      move={legalMoveByPawn.get(pawn.id)}
+      compact={compact}
+      isJustMoved={lastMove?.pawnId === pawn.id}
+      onSelect={onSelectPawn}
+      onHover={setHoveredPawnId}
+    />
+  );
 
   return (
     <div className="mx-auto w-full max-w-[515px] select-none">
