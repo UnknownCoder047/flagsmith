@@ -20,7 +20,6 @@ import {
   playLoadedTell,
   playMove,
   playVerdict,
-  setSoundMuted,
 } from './engine/sound';
 import {
   clearInspectorEvents,
@@ -37,13 +36,13 @@ import {
   type FlagsmithStateSnapshot,
 } from './lib/flagsmith';
 import { prefersReducedMotion } from './lib/motion';
+import { usePreferences } from './lib/usePreferences';
 
 const HIDDEN_ABANDON_MS = 30_000;
 const newSeed = () => (Math.random() * 2 ** 32) >>> 0;
 
 export default function App() {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-  const [muted, setMuted] = useState(false);
+  const { theme, muted, toggleTheme, toggleMute } = usePreferences();
   const [rulesOpen, setRulesOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [flagsmithState, setFlagsmithState] = useState<FlagsmithStateSnapshot>(() =>
@@ -76,19 +75,6 @@ export default function App() {
   useEffect(() => {
     document.title = "Deadwood Dice — Catch the Sharper's Loaded Bones";
   }, []);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-  }, [theme]);
-
-  useEffect(() => {
-    setSoundMuted(muted);
-  }, [muted]);
 
   useEffect(() => {
     const unsubscribe = subscribeFlagsmith(setFlagsmithState);
@@ -330,8 +316,8 @@ export default function App() {
       <Header
         theme={theme}
         muted={muted}
-        onToggleTheme={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
-        onToggleMute={() => setMuted((prev) => !prev)}
+        onToggleTheme={toggleTheme}
+        onToggleMute={toggleMute}
         onOpenRules={() => setRulesOpen(true)}
       />
 
