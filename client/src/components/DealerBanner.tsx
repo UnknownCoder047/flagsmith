@@ -81,7 +81,7 @@ export function DealerBanner({
         </div>
 
         {rollHistory.length === 0 ? (
-          <p className="py-2 text-center font-serif text-xs italic text-stone-500 dark:text-stone-400">
+          <p className="py-2 text-center font-serif text-xs italic text-stone-600 dark:text-stone-400">
             Watch the rolls closely once the stakes rise…
           </p>
         ) : (

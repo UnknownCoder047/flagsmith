@@ -25,8 +25,8 @@ export function PawnToken({
 
   // Physical 3D stacked casino/marshal chip styling
   const chip3DClass = isPlayer
-    ? 'bg-[radial-gradient(circle_at_30%_25%,#34d399_0%,#059669_55%,#064e3b_100%)] text-white border-emerald-200/85 shadow-[0_4px_0_#022c22,0_7px_12px_rgba(0,0,0,0.55),inset_0_1px_1px_rgba(255,255,255,0.6)]'
-    : 'bg-[radial-gradient(circle_at_30%_25%,#f87171_0%,#b91c1c_55%,#450a0a_100%)] text-amber-100 border-amber-300/80 shadow-[0_4px_0_#3b0707,0_7px_12px_rgba(0,0,0,0.58),inset_0_1px_1px_rgba(255,230,190,0.5)]';
+    ? 'bg-[radial-gradient(circle_at_30%_25%,#047857_0%,#065f46_55%,#064e3b_100%)] text-white border-emerald-200/85 shadow-[0_4px_0_#022c22,0_7px_12px_rgba(0,0,0,0.55),inset_0_1px_1px_rgba(255,255,255,0.6)]'
+    : 'bg-[radial-gradient(circle_at_30%_25%,#b91c1c_0%,#991b1b_55%,#450a0a_100%)] text-white border-amber-300/80 shadow-[0_4px_0_#3b0707,0_7px_12px_rgba(0,0,0,0.58),inset_0_1px_1px_rgba(255,230,190,0.5)]';
 
   if (isClickable) {
     return (

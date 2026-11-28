@@ -288,9 +288,9 @@ export function DeadwoodBoard({
                 return (
                   <div
                     key="dealer-corral"
-                    className="preserve-3d col-span-3 row-span-3 flex flex-col items-center justify-center rounded-xl border border-red-900/30 bg-red-950/15 p-2 shadow-[inset_0_4px_10px_rgba(0,0,0,0.28)] dark:border-red-500/25 dark:bg-red-950/30"
+                    className="preserve-3d col-span-3 row-span-3 flex flex-col items-center justify-center rounded-xl border border-red-900/30 bg-red-950/5 p-2 shadow-[inset_0_4px_10px_rgba(0,0,0,0.28)] dark:border-red-500/25 dark:bg-red-950/30"
                   >
-                    <span className="font-display text-[11px] font-bold uppercase tracking-wider text-red-900 dark:text-red-300">
+                    <span className="font-display text-[11px] font-bold uppercase tracking-wider text-stone-950 dark:text-red-300">
                       Silas&apos;s Corral
                     </span>
                     <div className="preserve-3d mt-2 flex items-center gap-1.5">
@@ -320,7 +320,7 @@ export function DeadwoodBoard({
                         : 'border-emerald-900/25 bg-emerald-950/10 dark:border-emerald-500/25 dark:bg-emerald-950/25'
                     }`}
                   >
-                    <span className="font-display text-[11px] font-bold uppercase tracking-wider text-emerald-900 dark:text-emerald-300">
+                    <span className="font-display text-[11px] font-bold uppercase tracking-wider text-stone-950 dark:text-emerald-300">
                       Your Corral
                     </span>
                     <div className="preserve-3d mt-2 flex items-center gap-1.5">
@@ -432,7 +432,7 @@ export function DeadwoodBoard({
                 >
                   {cellPawns.length === 0 &&
                     (kind === 'safe' || kind === 'player_entry' || kind === 'dealer_entry') && (
-                      <span className="pointer-events-none text-xs text-amber-700/80 dark:text-amber-300/75">
+                      <span aria-hidden="true" className="pointer-events-none text-xs text-amber-800 dark:text-amber-300/75">
                         ★
                       </span>
                     )}
