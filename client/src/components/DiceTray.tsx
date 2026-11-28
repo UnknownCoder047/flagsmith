@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { Dices } from 'lucide-react';
 import type { MatchPhase } from '../types';
+import { prefersReducedMotion } from '../lib/motion';
 
 interface DiceTrayProps {
   phase: MatchPhase;
@@ -55,7 +56,7 @@ export function DiceTray({
 
   // GSAP 3D physics roll + weighted center-bone hesitation tell
   useEffect(() => {
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const prefersReduced = prefersReducedMotion();
     const ctx = gsap.context(() => {
       if (isRolling) {
         wasRollingRef.current = true;

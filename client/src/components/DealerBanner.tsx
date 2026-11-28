@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { History } from 'lucide-react';
 import type { RollRecord } from '../types';
+import { prefersReducedMotion } from '../lib/motion';
 
 interface DealerBannerProps {
   dialogue: string;
@@ -15,7 +16,7 @@ export function DealerBanner({ dialogue, rollHistory, turn }: DealerBannerProps)
 
   useEffect(() => {
     if (!quoteRef.current) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (prefersReducedMotion()) return;
     gsap.fromTo(
       quoteRef.current,
       { opacity: 0.35, y: 4 },
@@ -25,7 +26,7 @@ export function DealerBanner({ dialogue, rollHistory, turn }: DealerBannerProps)
 
   useEffect(() => {
     if (!turnBadgeRef.current) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (prefersReducedMotion()) return;
     gsap.fromTo(
       turnBadgeRef.current,
       { scale: 0.85 },

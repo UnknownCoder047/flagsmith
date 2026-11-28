@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { Award, RotateCcw, ShieldAlert, Skull, Sparkles } from 'lucide-react';
 import type { RigProof, VerdictType } from '../types';
+import { prefersReducedMotion } from '../lib/motion';
 
 interface VerdictModalProps {
   verdict: VerdictType | null;
@@ -65,7 +66,7 @@ export function VerdictModal({
 
   useEffect(() => {
     if (!verdict || !modalRef.current) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (prefersReducedMotion()) return;
     gsap.fromTo(
       modalRef.current,
       { opacity: 0, y: 24, scale: 0.92, rotateX: 12 },

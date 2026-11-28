@@ -8,6 +8,7 @@ import {
   getCoordForProgress,
   HOME_PROGRESS,
 } from '../engine/board';
+import { prefersReducedMotion } from '../lib/motion';
 
 interface DeadwoodBoardProps {
   pawns: PawnState[];
@@ -45,7 +46,7 @@ export function DeadwoodBoard({
   useEffect(() => {
     const slab = slabRef.current;
     if (!slab) return;
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const prefersReduced = prefersReducedMotion();
     const baseRotateX = is3DView && !prefersReduced ? 14 : 0;
 
     const ctx = gsap.context(() => {
@@ -75,7 +76,7 @@ export function DeadwoodBoard({
   // Animate moved pawn hop + capture board recoil via GSAP
   useEffect(() => {
     if (!lastMove) return;
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const prefersReduced = prefersReducedMotion();
     if (prefersReduced) return;
 
     const ctx = gsap.context(() => {
@@ -131,7 +132,7 @@ export function DeadwoodBoard({
 
   const handleStageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!is3DView || !stageRef.current || !rotXToRef.current || !rotYToRef.current) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (prefersReducedMotion()) return;
     const rect = stageRef.current.getBoundingClientRect();
     const nx = (e.clientX - rect.left) / rect.width - 0.5; // -0.5..0.5
     const ny = (e.clientY - rect.top) / rect.height - 0.5;

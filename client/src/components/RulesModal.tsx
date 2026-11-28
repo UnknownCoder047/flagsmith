@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { Dices, Gavel, Shield, Sparkles, X } from 'lucide-react';
+import { prefersReducedMotion } from '../lib/motion';
 
 interface RulesModalProps {
   open: boolean;
@@ -12,7 +13,7 @@ export function RulesModal({ open, onClose }: RulesModalProps) {
 
   useEffect(() => {
     if (!open || !cardRef.current) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (prefersReducedMotion()) return;
     gsap.fromTo(
       cardRef.current,
       { opacity: 0, y: 20, scale: 0.94, rotateX: 10 },
