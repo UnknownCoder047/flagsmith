@@ -22,6 +22,8 @@ const EVENT_BADGE_STYLES: Record<string, string> = {
     'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900/70 dark:bg-violet-950/60 dark:text-violet-300',
   false_accusation:
     'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/60 dark:text-amber-300',
+  match_completed:
+    'border-stone-300 bg-stone-100 text-stone-700 dark:border-stone-700 dark:bg-stone-900/70 dark:text-stone-300',
   match_abandoned:
     'border-red-200 bg-red-50 text-red-700 dark:border-red-900/70 dark:bg-red-950/60 dark:text-red-300',
 };

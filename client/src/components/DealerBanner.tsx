@@ -1,21 +1,30 @@
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
-import { History } from 'lucide-react';
+import { Flag, History } from 'lucide-react';
 import type { RollRecord } from '../types';
+import { prefersReducedMotion } from '../lib/motion';
 
 interface DealerBannerProps {
   dialogue: string;
   rollHistory: RollRecord[];
+  flaggedRollIds: string[];
   turn: number;
+  onToggleFlag: (rollId: string) => void;
 }
 
-export function DealerBanner({ dialogue, rollHistory, turn }: DealerBannerProps) {
+export function DealerBanner({
+  dialogue,
+  rollHistory,
+  flaggedRollIds,
+  turn,
+  onToggleFlag,
+}: DealerBannerProps) {
   const quoteRef = useRef<HTMLParagraphElement | null>(null);
   const turnBadgeRef = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
     if (!quoteRef.current) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (prefersReducedMotion()) return;
     gsap.fromTo(
       quoteRef.current,
       { opacity: 0.35, y: 4 },
@@ -25,7 +34,7 @@ export function DealerBanner({ dialogue, rollHistory, turn }: DealerBannerProps)
 
   useEffect(() => {
     if (!turnBadgeRef.current) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (prefersReducedMotion()) return;
     gsap.fromTo(
       turnBadgeRef.current,
       { scale: 0.85 },
@@ -54,6 +63,7 @@ export function DealerBanner({ dialogue, rollHistory, turn }: DealerBannerProps)
           </div>
           <p
             ref={quoteRef}
+            aria-live="polite"
             className="mt-1.5 font-serif text-[13px] italic leading-relaxed text-stone-800 dark:text-stone-200"
           >
             &ldquo;{dialogue}&rdquo;
@@ -72,11 +82,11 @@ export function DealerBanner({ dialogue, rollHistory, turn }: DealerBannerProps)
         </div>
 
         {rollHistory.length === 0 ? (
-          <p className="py-2 text-center font-serif text-xs italic text-stone-500 dark:text-stone-400">
+          <p className="py-2 text-center font-serif text-xs italic text-stone-600 dark:text-stone-400">
             Watch the rolls closely once the stakes rise…
           </p>
         ) : (
-          <ul className="max-h-40 space-y-1.5 overflow-y-auto pr-1">
+          <ul aria-label="Table roll log" className="max-h-40 space-y-1.5 overflow-y-auto pr-1">
             {rollHistory.map((item) => {
               const isDealer = item.actor === 'dealer';
               return (
@@ -103,9 +113,27 @@ export function DealerBanner({ dialogue, rollHistory, turn }: DealerBannerProps)
                       </span>
                     )}
                   </div>
-                  <span className="type-tabular inline-flex shrink-0 items-center rounded border border-amber-800/20 bg-amber-100/80 px-1.5 py-0.5 font-mono text-[11px] font-bold text-stone-900 dark:border-amber-500/20 dark:bg-stone-800 dark:text-amber-200">
-                    {item.roll}
-                  </span>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onToggleFlag(item.id)}
+                      aria-pressed={flaggedRollIds.includes(item.id)}
+                      aria-label={`Mark turn ${item.turn} roll ${item.roll} suspicious`}
+                      title="Mark as suspicious"
+                      className={`rounded p-0.5 transition-colors focus-visible:ring-2 focus-visible:ring-red-500 ${
+                        flaggedRollIds.includes(item.id)
+                          ? 'text-red-600 dark:text-red-400'
+                          : 'text-stone-400 hover:text-red-600 dark:text-stone-600 dark:hover:text-red-400'
+                      }`}
+                    >
+                      <Flag
+                        className={`h-3.5 w-3.5 ${flaggedRollIds.includes(item.id) ? 'fill-current' : ''}`}
+                      />
+                    </button>
+                    <span className="type-tabular inline-flex items-center rounded border border-amber-800/20 bg-amber-100/80 px-1.5 py-0.5 font-mono text-[11px] font-bold text-stone-900 dark:border-amber-500/20 dark:bg-stone-800 dark:text-amber-200">
+                      {item.roll}
+                    </span>
+                  </div>
                 </li>
               );
             })}

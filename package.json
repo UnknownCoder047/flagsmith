@@ -8,6 +8,8 @@
     "dev": "npm --prefix client run dev",
     "build": "npm --prefix client run build",
     "preview": "npm --prefix client run preview",
-    "simulate": "npm --prefix scripts run simulate"
+    "simulate": "npm --prefix scripts run simulate",
+    "check": "npm --prefix scripts run check",
+    "lint": "npm --prefix client run lint"
   }
 }

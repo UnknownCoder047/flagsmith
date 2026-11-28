@@ -7,9 +7,12 @@ import {
   getCellKind,
   getCoordForProgress,
   HOME_PROGRESS,
+  OUTER_TRACK_LENGTH,
 } from '../engine/board';
+import { prefersReducedMotion } from '../lib/motion';
+import { PawnToken } from './PawnToken';
 
-interface ChausarBoardProps {
+interface DeadwoodBoardProps {
   pawns: PawnState[];
   legalMoves: LegalMove[];
   lastMove: LastMoveTrace | null;
@@ -26,13 +29,20 @@ const TRACK_ARROWS: Record<string, string> = {
   '1,4': '↓',
 };
 
-export function ChausarBoard({
+function describeProgress(progress: number): string {
+  if (progress < 0) return 'in the corral';
+  if (progress >= HOME_PROGRESS) return 'in the Gold Vault';
+  if (progress >= OUTER_TRACK_LENGTH) return `in the home lane, step ${progress - OUTER_TRACK_LENGTH + 1} of 2`;
+  return `on track square ${progress + 1} of ${OUTER_TRACK_LENGTH}`;
+}
+
+export function DeadwoodBoard({
   pawns,
   legalMoves,
   lastMove,
   canSelectMove,
   onSelectPawn,
-}: ChausarBoardProps) {
+}: DeadwoodBoardProps) {
   const [hoveredPawnId, setHoveredPawnId] = useState<string | null>(null);
   const [is3DView, setIs3DView] = useState(true);
 
@@ -45,7 +55,7 @@ export function ChausarBoard({
   useEffect(() => {
     const slab = slabRef.current;
     if (!slab) return;
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const prefersReduced = prefersReducedMotion();
     const baseRotateX = is3DView && !prefersReduced ? 14 : 0;
 
     const ctx = gsap.context(() => {
@@ -75,7 +85,7 @@ export function ChausarBoard({
   // Animate moved pawn hop + capture board recoil via GSAP
   useEffect(() => {
     if (!lastMove) return;
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const prefersReduced = prefersReducedMotion();
     if (prefersReduced) return;
 
     const ctx = gsap.context(() => {
@@ -131,7 +141,7 @@ export function ChausarBoard({
 
   const handleStageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!is3DView || !stageRef.current || !rotXToRef.current || !rotYToRef.current) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (prefersReducedMotion()) return;
     const rect = stageRef.current.getBoundingClientRect();
     const nx = (e.clientX - rect.left) / rect.width - 0.5; // -0.5..0.5
     const ny = (e.clientY - rect.top) / rect.height - 0.5;
@@ -166,6 +176,12 @@ export function ChausarBoard({
 
   const playerCorralPawns = pawns.filter((p) => p.owner === 'player' && p.progress === -1);
   const dealerCorralPawns = pawns.filter((p) => p.owner === 'dealer' && p.progress === -1);
+  const movedPawn = lastMove ? pawns.find((p) => p.id === lastMove.pawnId) : undefined;
+  const announcement =
+    lastMove && movedPawn
+      ? `${lastMove.actor === 'player' ? 'You' : 'Silas'} moved ${movedPawn.label} ${describeProgress(movedPawn.progress)}${lastMove.captured ? ', knocking a rider back to the corral' : ''}.`
+      : '';
+
   const playerVaultPawns = pawns.filter((p) => p.owner === 'player' && p.progress === HOME_PROGRESS);
   const dealerVaultPawns = pawns.filter((p) => p.owner === 'dealer' && p.progress === HOME_PROGRESS);
 
@@ -179,64 +195,30 @@ export function ChausarBoard({
     pawnsByCell.set(key, existing);
   }
 
-  const renderPawnToken = (pawn: PawnState, compact = false) => {
-    const move = legalMoveByPawn.get(pawn.id);
-    const isClickable = Boolean(move);
-    const isPlayer = pawn.owner === 'player';
-    const isJustMoved = lastMove?.pawnId === pawn.id;
-
-    const sizeClass = compact ? 'h-6 w-6 text-[10px]' : 'h-7 w-7 sm:h-8 sm:w-8 text-[11px]';
-
-    // Physical 3D stacked casino/marshal chip styling
-    const chip3DClass = isPlayer
-      ? 'bg-[radial-gradient(circle_at_30%_25%,#34d399_0%,#059669_55%,#064e3b_100%)] text-white border-emerald-200/85 shadow-[0_4px_0_#022c22,0_7px_12px_rgba(0,0,0,0.55),inset_0_1px_1px_rgba(255,255,255,0.6)]'
-      : 'bg-[radial-gradient(circle_at_30%_25%,#f87171_0%,#b91c1c_55%,#450a0a_100%)] text-amber-100 border-amber-300/80 shadow-[0_4px_0_#3b0707,0_7px_12px_rgba(0,0,0,0.58),inset_0_1px_1px_rgba(255,230,190,0.5)]';
-
-    if (isClickable) {
-      return (
-        <button
-          key={pawn.id}
-          data-pawn-id={pawn.id}
-          type="button"
-          onClick={() => {
-            setHoveredPawnId(null);
-            onSelectPawn(pawn.id);
-          }}
-          onMouseEnter={() => setHoveredPawnId(pawn.id)}
-          onMouseLeave={() => setHoveredPawnId(null)}
-          title={
-            move?.capturedPawnId
-              ? `Move ${pawn.label} to knock ${move.capturedPawnId.toUpperCase()} back to the Corral!`
-              : move?.entersHome
-                ? `Move ${pawn.label} into the Gold Vault!`
-                : `Move ${pawn.label}`
-          }
-          style={{ transform: 'translateZ(14px)' }}
-          className={`type-tabular relative z-20 flex items-center justify-center rounded-full border-2 font-mono font-bold transition-transform hover:-translate-y-1 hover:scale-110 active:translate-y-0.5 focus:outline-none animate-pawn-pulse ring-2 ring-amber-300 ${sizeClass} ${chip3DClass}`}
-        >
-          <span className="pointer-events-none absolute inset-[2px] rounded-full border border-dashed border-white/35" />
-          <span className="relative drop-shadow-[0_1px_1px_rgba(0,0,0,0.75)]">{pawn.label}</span>
-        </button>
-      );
-    }
-
-    return (
-      <div
-        key={pawn.id}
-        data-pawn-id={pawn.id}
-        style={{ transform: 'translateZ(8px)' }}
-        className={`type-tabular relative z-10 flex items-center justify-center rounded-full border font-mono font-bold transition-transform ${sizeClass} ${chip3DClass} ${
-          isJustMoved ? 'ring-2 ring-amber-300/90 scale-105' : ''
-        }`}
-      >
-        <span className="pointer-events-none absolute inset-[2px] rounded-full border border-dashed border-white/25" />
-        <span className="relative drop-shadow-[0_1px_1px_rgba(0,0,0,0.75)]">{pawn.label}</span>
-      </div>
-    );
-  };
+  const renderPawnToken = (pawn: PawnState, compact = false) => (
+    <PawnToken
+      key={pawn.id}
+      pawn={pawn}
+      move={legalMoveByPawn.get(pawn.id)}
+      compact={compact}
+      isJustMoved={lastMove?.pawnId === pawn.id}
+      onSelect={onSelectPawn}
+      onHover={setHoveredPawnId}
+    />
+  );
 
   return (
     <div className="mx-auto w-full max-w-[515px] select-none">
+      <p className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </p>
+      <p
+        className="sr-only focus:not-sr-only focus:mb-2 focus:rounded focus:bg-stone-900 focus:p-2 focus:text-xs focus:text-amber-100"
+        tabIndex={0}
+        aria-label="Board positions"
+      >
+        {pawns.map((p) => `${p.label} ${describeProgress(p.progress)}`).join('; ')}.
+      </p>
       {/* Top Camera & Scoreboard Bar */}
       <div className="mb-2.5 flex items-center justify-between gap-2 px-1">
         <div className="flex items-center gap-2 rounded-lg border border-emerald-700/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-800 dark:border-emerald-400/25 dark:text-emerald-300">
@@ -250,6 +232,7 @@ export function ChausarBoard({
         <button
           type="button"
           onClick={() => setIs3DView((prev) => !prev)}
+          aria-pressed={is3DView}
           title={is3DView ? 'Switch to flat top-down view' : 'Switch to 3D angled table view'}
           className="inline-flex items-center gap-1.5 rounded-lg border border-amber-700/30 bg-amber-100/70 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-amber-900 transition-colors hover:bg-amber-200/80 dark:border-amber-500/25 dark:bg-[#221812] dark:text-amber-200 dark:hover:bg-[#2e2018]"
         >
@@ -330,9 +313,9 @@ export function ChausarBoard({
                 return (
                   <div
                     key="dealer-corral"
-                    className="preserve-3d col-span-3 row-span-3 flex flex-col items-center justify-center rounded-xl border border-red-900/30 bg-red-950/15 p-2 shadow-[inset_0_4px_10px_rgba(0,0,0,0.28)] dark:border-red-500/25 dark:bg-red-950/30"
+                    className="preserve-3d col-span-3 row-span-3 flex flex-col items-center justify-center rounded-xl border border-red-900/30 bg-red-950/5 p-2 shadow-[inset_0_4px_10px_rgba(0,0,0,0.28)] dark:border-red-500/25 dark:bg-red-950/30"
                   >
-                    <span className="font-display text-[11px] font-bold uppercase tracking-wider text-red-900 dark:text-red-300">
+                    <span className="font-display text-[11px] font-bold uppercase tracking-wider text-stone-950 dark:text-red-300">
                       Silas&apos;s Corral
                     </span>
                     <div className="preserve-3d mt-2 flex items-center gap-1.5">
@@ -362,7 +345,7 @@ export function ChausarBoard({
                         : 'border-emerald-900/25 bg-emerald-950/10 dark:border-emerald-500/25 dark:bg-emerald-950/25'
                     }`}
                   >
-                    <span className="font-display text-[11px] font-bold uppercase tracking-wider text-emerald-900 dark:text-emerald-300">
+                    <span className="font-display text-[11px] font-bold uppercase tracking-wider text-stone-950 dark:text-emerald-300">
                       Your Corral
                     </span>
                     <div className="preserve-3d mt-2 flex items-center gap-1.5">
@@ -474,7 +457,7 @@ export function ChausarBoard({
                 >
                   {cellPawns.length === 0 &&
                     (kind === 'safe' || kind === 'player_entry' || kind === 'dealer_entry') && (
-                      <span className="pointer-events-none text-xs text-amber-700/80 dark:text-amber-300/75">
+                      <span aria-hidden="true" className="pointer-events-none text-xs text-amber-800 dark:text-amber-300/75">
                         ★
                       </span>
                     )}
@@ -484,7 +467,7 @@ export function ChausarBoard({
                     kind !== 'player_entry' &&
                     kind !== 'dealer_entry' &&
                     arrow && (
-                      <span className="pointer-events-none font-mono text-[10px] text-stone-500/75 dark:text-amber-200/35">
+                      <span aria-hidden="true" className="pointer-events-none font-mono text-[10px] text-stone-500/75 dark:text-amber-200/35">
                         {arrow}
                       </span>
                     )}

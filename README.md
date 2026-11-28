@@ -40,6 +40,7 @@ npm run dev
 
 ### Demo Mode & Experiment Inspector
 - Open `http://localhost:5173/?demo=true` to reveal the floating **Demo Mode** switcher (`demo_silent`, `demo_tells`, and real `anon_id`).
+- Events from `demo_silent` / `demo_tells` are **never sent** to Flagsmith (they show in the inspector as "demo identity: not sent"), so judge demos cannot pollute experiment results. The real `anon_id` still sends, tagged `demo: true`.
 - Click **Experiment Inspector** in the footer to view live Flagsmith connection status, assigned `sharper_tell_mode` variant, spoiler-protected rigged roll counter, and chronological event log.
 
 ---
@@ -72,6 +73,8 @@ Deploy `client/` directly as a static Vite app:
 5. *(Optional)* Verify your Bayesian dashboard end-to-end with the traffic simulator:
    ```bash
    cp scripts/.env.example scripts/.env
-   # Add FLAGSMITH_SERVER_KEY=ser.xxxxx
+   # Add FLAGSMITH_SERVER_KEY=ser.xxxxx from a SEPARATE, non-production environment
+   # and set SIM_CONFIRM_SEPARATE_ENV=yes
    npm run simulate
    ```
+   > The simulator sends **fabricated** outcomes (the `PROB_*` rates), tagged `simulated: true`. It never reflects real player behaviour, so keep it out of the environment that holds real results.

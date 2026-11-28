@@ -17,3 +17,14 @@ build/
 *.log
 .DS_Store
 Thumbs.db
+
+.projectmem/events.jsonl
+.projectmem/watch.pid
+.projectmem/watch.log
+.projectmem/structure.json
+
+# context-mem
+.context-mem/
+
+# TypeScript build info
+*.tsbuildinfo
