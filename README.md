@@ -73,6 +73,8 @@ Deploy `client/` directly as a static Vite app:
 5. *(Optional)* Verify your Bayesian dashboard end-to-end with the traffic simulator:
    ```bash
    cp scripts/.env.example scripts/.env
-   # Add FLAGSMITH_SERVER_KEY=ser.xxxxx
+   # Add FLAGSMITH_SERVER_KEY=ser.xxxxx from a SEPARATE, non-production environment
+   # and set SIM_CONFIRM_SEPARATE_ENV=yes
    npm run simulate
    ```
+   > The simulator sends **fabricated** outcomes (the `PROB_*` rates), tagged `simulated: true`. It never reflects real player behaviour, so keep it out of the environment that holds real results.

@@ -12,6 +12,10 @@
  *  4. Flushes buffered events cleanly before exit so Flagsmith's Bayesian dashboard
  *     can be verified end-to-end.
  *
+ * SYNTHETIC DATA: outcomes come from the PROB_* env rates, not from real players. Every
+ * event is tagged `simulated: true`. Run it only against a separate Flagsmith environment;
+ * it refuses to start until SIM_CONFIRM_SEPARATE_ENV=yes is set.
+ *
  * Usage:
  *   npm run simulate                  (from repo root)
  *   npx tsx simulate-traffic.ts 400   (override player count via CLI arg)
@@ -104,6 +108,15 @@ async function runSimulation(): Promise<void> {
     process.exit(1);
   }
 
+  if (process.env.SIM_CONFIRM_SEPARATE_ENV !== 'yes') {
+    console.error(
+      'Refusing to run: this script sends FABRICATED outcomes (PROB_* rates) as events.\n' +
+        'Point FLAGSMITH_SERVER_KEY at a separate, non-production Flagsmith environment,\n' +
+        'then set SIM_CONFIRM_SEPARATE_ENV=yes in scripts/.env.',
+    );
+    process.exit(1);
+  }
+
   console.log(`\n[Deadwood Simulator] Starting simulation for N=${totalUsers} unique players...`);
 
   const clientOptions: Record<string, unknown> = {
@@ -121,6 +134,15 @@ async function runSimulation(): Promise<void> {
   const flagsmith = new Flagsmith(
     clientOptions as ConstructorParameters<typeof Flagsmith>[0],
   ) as unknown as FlagsmithExperimentNodeClient;
+
+  const rawTrackEvent = flagsmith.trackEvent?.bind(flagsmith);
+  if (rawTrackEvent) {
+    flagsmith.trackEvent = (eventName, opts) =>
+      rawTrackEvent(eventName, {
+        ...opts,
+        metadata: { ...opts.metadata, simulated: true },
+      });
+  }
 
   const stats: Record<TellVariant, VariantStats> = {
     silent_bias: {
@@ -220,6 +242,13 @@ async function runSimulation(): Promise<void> {
       stats[variant].dealerWon += 1;
     }
 
+    if (typeof flagsmith.trackEvent === 'function') {
+      await flagsmith.trackEvent('match_completed', {
+        identifier,
+        metadata: { variant, verdict, turn: endTurn, rigged_count: 2 + Math.floor(Math.random() * 4) },
+      });
+    }
+
     if (Math.random() < behavior.playAgainProb) {
       stats[variant].playAgain += 1;
       if (typeof flagsmith.trackEvent === 'function') {
@@ -268,7 +297,7 @@ async function runSimulation(): Promise<void> {
       };
     }),
   );
-  console.log('Events flushed to Flagsmith. Refresh your Flagsmith Experiment results dashboard.\n');
+  console.log('Events flushed to Flagsmith (tagged simulated=true). Refresh your Flagsmith Experiment results dashboard.\n');
 }
 
 runSimulation().catch((err) => {

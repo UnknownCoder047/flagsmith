@@ -99,7 +99,7 @@ Flag: `sharper_tell_mode`, 50/50 multivariate.
 
 ### Traffic simulator
 
-`npm run simulate [N]` creates N fake players. Per-variant probabilities are configurable via env (for example `PROB_SILENT_CAUGHT`, default 0.34). It sends exposure and outcome events so the Bayesian dashboard can be checked. Needs `FLAGSMITH_SERVER_KEY` in `scripts/.env`.
+`npm run simulate [N]` creates N fake players. Per-variant probabilities are configurable via env (for example `PROB_SILENT_CAUGHT`, default 0.34). It sends exposure and outcome events so the Bayesian dashboard can be checked. Outcomes are fabricated from those rates. Every event is tagged `simulated: true`, and it also sends `match_completed`. It refuses to run until `SIM_CONFIRM_SEPARATE_ENV=yes` is set. Use a separate, non-production environment. Needs `FLAGSMITH_SERVER_KEY` in `scripts/.env`.
 
 ## Run
 
