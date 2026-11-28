@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { Dices, Gavel, Shield, Sparkles, X } from 'lucide-react';
+import { useDialog } from '../lib/useDialog';
 import { prefersReducedMotion } from '../lib/motion';
 
 interface RulesModalProps {
@@ -10,6 +11,7 @@ interface RulesModalProps {
 
 export function RulesModal({ open, onClose }: RulesModalProps) {
   const cardRef = useRef<HTMLDivElement | null>(null);
+  useDialog(cardRef, open, onClose);
 
   useEffect(() => {
     if (!open || !cardRef.current) return;

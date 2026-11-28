@@ -39,6 +39,13 @@ export function PawnToken({
         }}
         onMouseEnter={() => onHover(pawn.id)}
         onMouseLeave={() => onHover(null)}
+        aria-label={
+          move?.capturedPawnId
+            ? `Move ${pawn.label} to knock ${move.capturedPawnId.toUpperCase()} back to the Corral`
+            : move?.entersHome
+              ? `Move ${pawn.label} into the Gold Vault`
+              : `Move ${pawn.label}`
+        }
         title={
           move?.capturedPawnId
             ? `Move ${pawn.label} to knock ${move.capturedPawnId.toUpperCase()} back to the Corral!`
@@ -47,7 +54,7 @@ export function PawnToken({
               : `Move ${pawn.label}`
         }
         style={{ transform: 'translateZ(14px)' }}
-        className={`type-tabular relative z-20 flex items-center justify-center rounded-full border-2 font-mono font-bold transition-transform hover:-translate-y-1 hover:scale-110 active:translate-y-0.5 focus:outline-none animate-pawn-pulse ring-2 ring-amber-300 ${sizeClass} ${chip3DClass}`}
+        className={`type-tabular relative z-20 flex items-center justify-center rounded-full border-2 font-mono font-bold transition-transform hover:-translate-y-1 hover:scale-110 active:translate-y-0.5 focus:outline-none focus-visible:ring-4 focus-visible:ring-white animate-pawn-pulse ring-2 ring-amber-300 ${sizeClass} ${chip3DClass}`}
       >
         <span className="pointer-events-none absolute inset-[2px] rounded-full border border-dashed border-white/35" />
         <span className="relative drop-shadow-[0_1px_1px_rgba(0,0,0,0.75)]">{pawn.label}</span>

@@ -5,9 +5,10 @@ import { prefersReducedMotion } from '../lib/motion';
 
 function InteractiveTitle({ text }: { text: string }) {
   return (
-    <span aria-label={text} className="inline-flex flex-wrap gap-x-3">
+    <span className="inline-flex flex-wrap gap-x-3">
+      <span className="sr-only">{text}</span>
       {text.split(' ').map((word, wIdx) => (
-        <span key={wIdx} className="inline-flex whitespace-nowrap">
+        <span key={wIdx} aria-hidden="true" className="inline-flex whitespace-nowrap">
           {Array.from(word).map((ch, cIdx) => (
             <span
               key={cIdx}

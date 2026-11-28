@@ -7,6 +7,7 @@ import {
   getCellKind,
   getCoordForProgress,
   HOME_PROGRESS,
+  OUTER_TRACK_LENGTH,
 } from '../engine/board';
 import { prefersReducedMotion } from '../lib/motion';
 import { PawnToken } from './PawnToken';
@@ -27,6 +28,13 @@ const TRACK_ARROWS: Record<string, string> = {
   '7,4': '↑',
   '1,4': '↓',
 };
+
+function describeProgress(progress: number): string {
+  if (progress < 0) return 'in the corral';
+  if (progress >= HOME_PROGRESS) return 'in the Gold Vault';
+  if (progress >= OUTER_TRACK_LENGTH) return `in the home lane, step ${progress - OUTER_TRACK_LENGTH + 1} of 2`;
+  return `on track square ${progress + 1} of ${OUTER_TRACK_LENGTH}`;
+}
 
 export function DeadwoodBoard({
   pawns,
@@ -168,6 +176,12 @@ export function DeadwoodBoard({
 
   const playerCorralPawns = pawns.filter((p) => p.owner === 'player' && p.progress === -1);
   const dealerCorralPawns = pawns.filter((p) => p.owner === 'dealer' && p.progress === -1);
+  const movedPawn = lastMove ? pawns.find((p) => p.id === lastMove.pawnId) : undefined;
+  const announcement =
+    lastMove && movedPawn
+      ? `${lastMove.actor === 'player' ? 'You' : 'Silas'} moved ${movedPawn.label} ${describeProgress(movedPawn.progress)}${lastMove.captured ? ', knocking a rider back to the corral' : ''}.`
+      : '';
+
   const playerVaultPawns = pawns.filter((p) => p.owner === 'player' && p.progress === HOME_PROGRESS);
   const dealerVaultPawns = pawns.filter((p) => p.owner === 'dealer' && p.progress === HOME_PROGRESS);
 
@@ -195,6 +209,16 @@ export function DeadwoodBoard({
 
   return (
     <div className="mx-auto w-full max-w-[515px] select-none">
+      <p className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </p>
+      <p
+        className="sr-only focus:not-sr-only focus:mb-2 focus:rounded focus:bg-stone-900 focus:p-2 focus:text-xs focus:text-amber-100"
+        tabIndex={0}
+        aria-label="Board positions"
+      >
+        {pawns.map((p) => `${p.label} ${describeProgress(p.progress)}`).join('; ')}.
+      </p>
       {/* Top Camera & Scoreboard Bar */}
       <div className="mb-2.5 flex items-center justify-between gap-2 px-1">
         <div className="flex items-center gap-2 rounded-lg border border-emerald-700/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-800 dark:border-emerald-400/25 dark:text-emerald-300">
@@ -208,6 +232,7 @@ export function DeadwoodBoard({
         <button
           type="button"
           onClick={() => setIs3DView((prev) => !prev)}
+          aria-pressed={is3DView}
           title={is3DView ? 'Switch to flat top-down view' : 'Switch to 3D angled table view'}
           className="inline-flex items-center gap-1.5 rounded-lg border border-amber-700/30 bg-amber-100/70 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-amber-900 transition-colors hover:bg-amber-200/80 dark:border-amber-500/25 dark:bg-[#221812] dark:text-amber-200 dark:hover:bg-[#2e2018]"
         >
@@ -442,7 +467,7 @@ export function DeadwoodBoard({
                     kind !== 'player_entry' &&
                     kind !== 'dealer_entry' &&
                     arrow && (
-                      <span className="pointer-events-none font-mono text-[10px] text-stone-500/75 dark:text-amber-200/35">
+                      <span aria-hidden="true" className="pointer-events-none font-mono text-[10px] text-stone-500/75 dark:text-amber-200/35">
                         {arrow}
                       </span>
                     )}

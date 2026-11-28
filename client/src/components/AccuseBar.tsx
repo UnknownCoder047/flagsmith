@@ -17,10 +17,10 @@ export function AccuseBar({ phase, flaggedCount, onCallOut, onForfeit }: AccuseB
   const canCallOut = isActiveMatch && flaggedCount >= MIN_FLAGGED_HITS;
 
   return (
-    <section className="plaque-3d rounded-2xl border-red-900/30 p-4 dark:border-red-500/30">
+    <section aria-labelledby="accuse-title" className="plaque-3d rounded-2xl border-red-900/30 p-4 dark:border-red-500/30">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="type-broadsheet font-display text-sm uppercase tracking-[0.14em] text-red-900 dark:text-red-300">
+          <h2 id="accuse-title" className="type-broadsheet font-display text-sm uppercase tracking-[0.14em] text-red-900 dark:text-red-300">
             Call the Table
           </h2>
           <p className="mt-1 font-serif text-xs leading-relaxed text-stone-700 dark:text-stone-300">
@@ -64,6 +64,7 @@ export function AccuseBar({ phase, flaggedCount, onCallOut, onForfeit }: AccuseB
       <button
         type="button"
         disabled={!canCallOut}
+        aria-describedby="accuse-hint"
         onClick={onCallOut}
         className={`group mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm transition-all ${
           canCallOut
@@ -75,7 +76,7 @@ export function AccuseBar({ phase, flaggedCount, onCallOut, onForfeit }: AccuseB
         <span className="type-interactive">Call Out Loaded Dice</span>
       </button>
 
-      <div className="mt-2.5 flex items-center gap-1.5 font-sans text-[11px] text-amber-900/90 dark:text-amber-300/85">
+      <div id="accuse-hint" className="mt-2.5 flex items-center gap-1.5 font-sans text-[11px] text-amber-900/90 dark:text-amber-300/85">
         <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
         <span>
           {canCallOut

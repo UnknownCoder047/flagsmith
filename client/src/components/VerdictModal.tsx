@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { Award, RotateCcw, ShieldAlert, Skull, Sparkles } from 'lucide-react';
+import { useDialog } from '../lib/useDialog';
 import type { RigProof, VerdictType } from '../types';
 import { prefersReducedMotion } from '../lib/motion';
 
@@ -63,6 +64,7 @@ export function VerdictModal({
   onPlayAgain,
 }: VerdictModalProps) {
   const modalRef = useRef<HTMLDivElement | null>(null);
+  useDialog(modalRef, verdict !== null);
 
   useEffect(() => {
     if (!verdict || !modalRef.current) return;

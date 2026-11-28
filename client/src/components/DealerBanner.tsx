@@ -63,6 +63,7 @@ export function DealerBanner({
           </div>
           <p
             ref={quoteRef}
+            aria-live="polite"
             className="mt-1.5 font-serif text-[13px] italic leading-relaxed text-stone-800 dark:text-stone-200"
           >
             &ldquo;{dialogue}&rdquo;
@@ -85,7 +86,7 @@ export function DealerBanner({
             Watch the rolls closely once the stakes rise…
           </p>
         ) : (
-          <ul className="max-h-40 space-y-1.5 overflow-y-auto pr-1">
+          <ul aria-label="Table roll log" className="max-h-40 space-y-1.5 overflow-y-auto pr-1">
             {rollHistory.map((item) => {
               const isDealer = item.actor === 'dealer';
               return (

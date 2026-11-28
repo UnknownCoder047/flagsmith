@@ -10,6 +10,8 @@ export function InGameRulesCard() {
       <button
         type="button"
         onClick={() => setCollapsed((prev) => !prev)}
+        aria-expanded={!collapsed}
+        aria-controls="in-game-rules-body"
         className="group flex w-full items-center justify-between text-left"
       >
         <div className="flex items-center gap-2">
@@ -29,7 +31,7 @@ export function InGameRulesCard() {
       </button>
 
       {!collapsed && (
-        <div className="mt-3 grid gap-2.5 border-t border-amber-900/15 pt-3 font-serif text-xs leading-relaxed text-stone-700 sm:grid-cols-2 dark:border-amber-500/15 dark:text-stone-300">
+        <div id="in-game-rules-body" className="mt-3 grid gap-2.5 border-t border-amber-900/15 pt-3 font-serif text-xs leading-relaxed text-stone-700 sm:grid-cols-2 dark:border-amber-500/15 dark:text-stone-300">
           <div className="flex items-start gap-2">
             <Dices className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-700 dark:text-amber-400" />
             <div>
