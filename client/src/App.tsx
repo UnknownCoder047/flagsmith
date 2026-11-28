@@ -291,8 +291,14 @@ export default function App() {
     if (rulesOpen || game.phase === 'landing' || game.phase === 'verdict') return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Leave browser/OS shortcuts (Cmd+1 tab switch, Ctrl+R...) and key-repeat alone.
+      if (event.metaKey || event.ctrlKey || event.altKey || event.repeat) return;
       const target = event.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      // Space/Enter on a focused button or link must activate that control, not the shortcut.
+      const onControl = Boolean(target?.closest('button, a, [role="button"]'));
+      const isActivationKey = event.code === 'Space' || event.key === 'Enter';
+      if (onControl && isActivationKey) return;
 
       if (event.code === 'Space' && game.phase === 'player_roll' && !game.isRolling) {
         event.preventDefault();
