@@ -31,12 +31,14 @@ import {
   trackCheatCaught,
   trackFalseAccusation,
   trackMatchAbandoned,
+  trackMatchCompleted,
   trackPlayAgain,
   triggerExperimentExposure,
   type FlagsmithStateSnapshot,
 } from './lib/flagsmith';
 import { prefersReducedMotion } from './lib/motion';
 
+const HIDDEN_ABANDON_MS = 30_000;
 const newSeed = () => (Math.random() * 2 ** 32) >>> 0;
 
 export default function App() {
@@ -137,23 +139,42 @@ export default function App() {
     }
   }, [game.lastMove]);
 
-  // Guardrail 2: visibilitychange listener for mid-match tab abandonment
+  // Guardrail 2: abandonment = tab hidden > 30s, page closed, or forfeit (not a quick tab glance).
+  const matchRef = useRef({ turn: game.turn, startedAt: game.matchStartedAt });
+  useEffect(() => {
+    matchRef.current = { turn: game.turn, startedAt: game.matchStartedAt };
+  }, [game.turn, game.matchStartedAt]);
+
   useEffect(() => {
     if (!isMatchActive) return;
 
+    let hiddenTimer: number | null = null;
+    const abandon = (reason: 'tab_hidden' | 'page_closed') => {
+      if (abandonedThisMatchRef.current) return;
+      abandonedThisMatchRef.current = true;
+      const { turn, startedAt } = matchRef.current;
+      trackMatchAbandoned(reason, turn, startedAt ? Date.now() - startedAt : 0);
+    };
+    const clearHiddenTimer = () => {
+      if (hiddenTimer !== null) window.clearTimeout(hiddenTimer);
+      hiddenTimer = null;
+    };
     const handleVisibilityChange = () => {
-      if (document.hidden && !abandonedThisMatchRef.current) {
-        abandonedThisMatchRef.current = true;
-        const elapsedMs = game.matchStartedAt ? Date.now() - game.matchStartedAt : 0;
-        trackMatchAbandoned('tab_hidden', game.turn, elapsedMs);
+      clearHiddenTimer();
+      if (document.hidden) {
+        hiddenTimer = window.setTimeout(() => abandon('tab_hidden'), HIDDEN_ABANDON_MS);
       }
     };
+    const handlePageHide = () => abandon('page_closed');
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
     return () => {
+      clearHiddenTimer();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
     };
-  }, [isMatchActive, game.matchStartedAt, game.turn]);
+  }, [isMatchActive]);
 
   // Fixed Silas Vance turn loop (prevents infinite re-roll on Vault overshoot)
   useEffect(() => {
@@ -193,6 +214,8 @@ export default function App() {
     verdictTrackedRef.current = true;
 
     playVerdict(game.verdict === 'caught' || game.verdict === 'player_won');
+
+    trackMatchCompleted(game.verdict, game.turn, game.proofLedger.length);
 
     if (game.verdict === 'caught') {
       trackCheatCaught(game.turn, game.proofLedger.length);
@@ -388,7 +411,7 @@ export default function App() {
         currentIdentity={flagsmithState.identity}
         anonId={flagsmithState.anonId}
         activeVariant={flagsmithState.variant}
-        disabled={game.isRolling}
+        disabled={game.isRolling || isMatchActive}
         onSwitchIdentity={handleSwitchIdentity}
       />
 

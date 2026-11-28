@@ -7,7 +7,8 @@ export type ExperimentEventName =
   | 'cheat_caught'
   | 'play_again_clicked'
   | 'false_accusation'
-  | 'match_abandoned';
+  | 'match_abandoned'
+  | 'match_completed';
 
 export interface InspectorEvent {
   id: string;

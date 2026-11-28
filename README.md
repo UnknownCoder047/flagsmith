@@ -40,6 +40,7 @@ npm run dev
 
 ### Demo Mode & Experiment Inspector
 - Open `http://localhost:5173/?demo=true` to reveal the floating **Demo Mode** switcher (`demo_silent`, `demo_tells`, and real `anon_id`).
+- Events from `demo_silent` / `demo_tells` are **never sent** to Flagsmith (they show in the inspector as "demo identity: not sent"), so judge demos cannot pollute experiment results. The real `anon_id` still sends, tagged `demo: true`.
 - Click **Experiment Inspector** in the footer to view live Flagsmith connection status, assigned `sharper_tell_mode` variant, spoiler-protected rigged roll counter, and chronological event log.
 
 ---

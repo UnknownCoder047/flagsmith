@@ -17,6 +17,9 @@ async function main() {
   assert.equal(triggerExperimentExposure(), 'subtle_tells');
   const events = getFlagsmithSnapshot().events;
   assert.equal(events.filter((e) => e.event === 'exposure').length, 2);
+  // Exposure fires once per identity: repeating it (Play Again) adds no event.
+  assert.equal(triggerExperimentExposure(), 'subtle_tells');
+  assert.equal(getFlagsmithSnapshot().events.filter((e) => e.event === 'exposure').length, 2);
 
   // Any other identity is stable across calls.
   assert.equal(await switchIdentity('abc'), await switchIdentity('abc'));
