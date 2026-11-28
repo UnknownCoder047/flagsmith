@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { AlertTriangle, Flag, Gavel } from 'lucide-react';
 import { MIN_FLAGGED_HITS } from '../engine/gameReducer';
 import type { MatchPhase } from '../types';
@@ -12,6 +13,7 @@ interface AccuseBarProps {
 export function AccuseBar({ phase, flaggedCount, onCallOut, onForfeit }: AccuseBarProps) {
   const isActiveMatch =
     phase === 'player_roll' || phase === 'player_move' || phase === 'dealer_turn';
+  const [confirmingFold, setConfirmingFold] = useState(false);
   const canCallOut = isActiveMatch && flaggedCount >= MIN_FLAGGED_HITS;
 
   return (
@@ -26,17 +28,37 @@ export function AccuseBar({ phase, flaggedCount, onCallOut, onForfeit }: AccuseB
             the table.
           </p>
         </div>
-        {isActiveMatch && (
-          <button
-            type="button"
-            onClick={onForfeit}
-            title="Fold match"
-            className="inline-flex shrink-0 items-center gap-1 rounded-md border border-stone-400/50 px-2 py-1 font-mono text-[10px] font-medium text-stone-600 transition-colors hover:border-red-500 hover:text-red-700 dark:border-stone-700 dark:text-stone-400 dark:hover:border-red-500/50 dark:hover:text-red-300"
-          >
-            <Flag className="h-3 w-3" />
-            <span className="type-interactive">Fold</span>
-          </button>
-        )}
+        {isActiveMatch &&
+          (confirmingFold ? (
+            <div className="flex shrink-0 items-center gap-1 font-mono text-[10px]" role="group" aria-label="Confirm fold">
+              <span className="text-stone-600 dark:text-stone-400">Fold match?</span>
+              <button
+                type="button"
+                onClick={onForfeit}
+                autoFocus
+                className="rounded-md border border-red-600 bg-red-700 px-2 py-1 font-medium text-white focus-visible:ring-2 focus-visible:ring-red-400"
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmingFold(false)}
+                className="rounded-md border border-stone-400/50 px-2 py-1 font-medium text-stone-700 dark:border-stone-700 dark:text-stone-300"
+              >
+                No
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingFold(true)}
+              title="Fold match"
+              className="inline-flex shrink-0 items-center gap-1 rounded-md border border-stone-400/50 px-2 py-1 font-mono text-[10px] font-medium text-stone-600 transition-colors hover:border-red-500 hover:text-red-700 dark:border-stone-700 dark:text-stone-400 dark:hover:border-red-500/50 dark:hover:text-red-300"
+            >
+              <Flag className="h-3 w-3" />
+              <span className="type-interactive">Fold</span>
+            </button>
+          ))}
       </div>
 
       <button
