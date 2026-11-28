@@ -14,10 +14,14 @@
     <title>Deadwood Dice — Catch the Sharper's Loaded Bones</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Non-blocking: text paints in fallback fonts first (display=swap), then swaps. -->
     <link
+      rel="preload"
+      as="style"
       href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,300..900&family=Martian+Mono:wdth,wght@75..112.5,300..800&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Rokkitt:ital,wght@0,300..900;1,300..900&display=swap"
-      rel="stylesheet"
+      onload="this.onload=null;this.rel='stylesheet'"
     />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,300..900&family=Martian+Mono:wdth,wght@75..112.5,300..800&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Rokkitt:ital,wght@0,300..900;1,300..900&display=swap" /></noscript>
   </head>
   <body class="bg-[#efe6d5] font-sans text-stone-900 antialiased dark:bg-[#0d0806] dark:text-stone-100">
     <div id="root"></div>
