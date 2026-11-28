@@ -40,7 +40,7 @@ const VERDICT_META: Record<
   },
   false_accusation: {
     title: 'Bad Call — Instant Defeat',
-    subtitle: 'You accused a clean table before enough rigged rolls were on the books.',
+    subtitle: 'Your flagged rolls were mostly honest, so the accusation fell flat.',
     badge: 'False Accusation',
     accentClass:
       'border-amber-600/40 bg-amber-500/15 text-amber-900 dark:text-amber-300',

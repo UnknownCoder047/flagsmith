@@ -65,7 +65,7 @@ export function InGameRulesCard() {
               <span className="font-sans text-[11px] font-bold text-stone-950 dark:text-amber-100">
                 4. Catch the Cheat:
               </span>{' '}
-              Turns 1–3 are honest. Call out loaded dice after <strong>2+ rigged rolls</strong> to win instantly—accuse too early and you lose!
+              Turns 1–3 are honest. Flag <strong>2+ suspicious rolls</strong> in the roll log, then call out. Most flags must be truly loaded to win—wrong flags lose!
             </div>
           </div>
         </div>

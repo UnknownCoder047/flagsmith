@@ -1,16 +1,18 @@
 import { AlertTriangle, Flag, Gavel } from 'lucide-react';
+import { MIN_FLAGGED_HITS } from '../engine/gameReducer';
 import type { MatchPhase } from '../types';
 
 interface AccuseBarProps {
   phase: MatchPhase;
-  turn: number;
+  flaggedCount: number;
   onCallOut: () => void;
   onForfeit: () => void;
 }
 
-export function AccuseBar({ phase, turn, onCallOut, onForfeit }: AccuseBarProps) {
+export function AccuseBar({ phase, flaggedCount, onCallOut, onForfeit }: AccuseBarProps) {
   const isActiveMatch =
     phase === 'player_roll' || phase === 'player_move' || phase === 'dealer_turn';
+  const canCallOut = isActiveMatch && flaggedCount >= MIN_FLAGGED_HITS;
 
   return (
     <section className="plaque-3d rounded-2xl border-red-900/30 p-4 dark:border-red-500/30">
@@ -20,8 +22,8 @@ export function AccuseBar({ phase, turn, onCallOut, onForfeit }: AccuseBarProps)
             Call the Table
           </h2>
           <p className="mt-1 font-serif text-xs leading-relaxed text-stone-700 dark:text-stone-300">
-            Think Silas switched in loaded bones? Slam the table once you spot suspicious
-            rolls.
+            Think Silas switched in loaded bones? Flag suspicious rolls in the log, then slam
+            the table.
           </p>
         </div>
         {isActiveMatch && (
@@ -39,10 +41,10 @@ export function AccuseBar({ phase, turn, onCallOut, onForfeit }: AccuseBarProps)
 
       <button
         type="button"
-        disabled={!isActiveMatch}
+        disabled={!canCallOut}
         onClick={onCallOut}
         className={`group mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm transition-all ${
-          isActiveMatch
+          canCallOut
             ? 'border border-red-400/50 border-b-4 border-b-red-950 bg-gradient-to-b from-red-600 via-red-700 to-red-800 text-amber-50 shadow-[0_8px_18px_-6px_rgba(185,28,28,0.65)] hover:from-red-500 hover:to-red-700 active:translate-y-0.5 active:border-b-2'
             : 'cursor-not-allowed border border-stone-300 bg-stone-200 text-stone-400 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-600'
         }`}
@@ -54,9 +56,9 @@ export function AccuseBar({ phase, turn, onCallOut, onForfeit }: AccuseBarProps)
       <div className="mt-2.5 flex items-center gap-1.5 font-sans text-[11px] text-amber-900/90 dark:text-amber-300/85">
         <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
         <span>
-          {turn <= 3
-            ? 'Hold your fire: calling out with fewer than 2 rigged rolls forfeits the pot.'
-            : 'Valid catch (2+ rigged rolls) wins the pot instantly. False call loses.'}
+          {canCallOut
+            ? `${flaggedCount} rolls flagged. If most are truly loaded, you win the pot. Wrong flags lose it.`
+            : `Flag at least ${MIN_FLAGGED_HITS} suspicious rolls in the Table Roll Log (⚑) to call out.`}
         </span>
       </div>
     </section>

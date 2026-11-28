@@ -107,9 +107,9 @@ export function RulesModal({ open, onClose }: RulesModalProps) {
                 4. Call Out Loaded Dice to Win Instantly
               </p>
               <p className="mt-0.5 font-serif text-[13px] text-stone-600 dark:text-stone-400">
-                Call out Silas once at least <strong>2 rigged rolls</strong> have happened
-                for an instant win. Call too early (0–1 rigged rolls) and you forfeit the
-                pot!
+                Flag at least <strong>2 suspicious rolls</strong> in the Table Roll Log, then
+                call out Silas. If most of your flags are truly loaded rolls you win
+                instantly. Flag honest rolls and you forfeit the pot!
               </p>
             </div>
           </div>

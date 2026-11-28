@@ -228,6 +228,10 @@ export default function App() {
     dispatch({ type: 'PLAYER_MOVE_PAWN', pawnId });
   }, []);
 
+  const handleToggleFlag = useCallback((rollId: string) => {
+    dispatch({ type: 'TOGGLE_FLAG_ROLL', rollId });
+  }, []);
+
   const handleCallOut = useCallback(() => {
     clearPlayerRollTimer();
     playGavel();
@@ -332,7 +336,7 @@ export default function App() {
 
               <AccuseBar
                 phase={game.phase}
-                turn={game.turn}
+                flaggedCount={game.flaggedRollIds.length}
                 onCallOut={handleCallOut}
                 onForfeit={handleForfeit}
               />
@@ -340,7 +344,9 @@ export default function App() {
               <DealerBanner
                 dialogue={game.dealerDialogue}
                 rollHistory={game.rollHistory}
+                flaggedRollIds={game.flaggedRollIds}
                 turn={game.turn}
+                onToggleFlag={handleToggleFlag}
               />
             </div>
           </div>
