@@ -110,8 +110,8 @@ export function Landing({ onStart }: { onStart: () => void }) {
         <strong className="font-semibold text-stone-950 dark:text-amber-200">
           Silas Vance
         </strong>{' '}
-        for a tight frontier board duel. Turns 1–3 are dead honest—after that, his
-        ivory stick-bones start hiding lead.
+        for a tight frontier board duel. The table starts square—but sooner or later
+        his ivory stick-bones start hiding lead.
       </p>
 
       {/* Stamped Assay Ledger Steps (replaces generic 3-column SaaS card grid) */}
@@ -158,7 +158,7 @@ export function Landing({ onStart }: { onStart: () => void }) {
               <span>Call the Cheat</span>
             </div>
             <p className="mt-0.5 font-serif text-xs text-stone-600 dark:text-stone-300">
-              Flag 2+ suspicious rolls in the log, then slam the table. Flag honest
+              Flag the rolls that smell wrong in the log, then slam the table. Flag honest
               rolls and you fold.
             </p>
           </div>

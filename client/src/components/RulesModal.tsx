@@ -93,7 +93,7 @@ export function RulesModal({ open, onClose }: RulesModalProps) {
                 3. Watch for Silas&apos;s Loaded Dice
               </p>
               <p className="mt-0.5 font-serif text-[13px] text-stone-600 dark:text-stone-400">
-                Turns 1–3 are 100% honest. Once the pot heats up, Silas starts quietly
+                The table starts square. Once the pot heats up, Silas starts quietly
                 nudging the dice—slipping out of danger, landing exact knockbacks, or
                 leaving you 1 tile short.
               </p>
