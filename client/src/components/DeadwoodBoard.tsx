@@ -9,7 +9,7 @@ import {
   HOME_PROGRESS,
 } from '../engine/board';
 
-interface ChausarBoardProps {
+interface DeadwoodBoardProps {
   pawns: PawnState[];
   legalMoves: LegalMove[];
   lastMove: LastMoveTrace | null;
@@ -26,13 +26,13 @@ const TRACK_ARROWS: Record<string, string> = {
   '1,4': '↓',
 };
 
-export function ChausarBoard({
+export function DeadwoodBoard({
   pawns,
   legalMoves,
   lastMove,
   canSelectMove,
   onSelectPawn,
-}: ChausarBoardProps) {
+}: DeadwoodBoardProps) {
   const [hoveredPawnId, setHoveredPawnId] = useState<string | null>(null);
   const [is3DView, setIs3DView] = useState(true);
 

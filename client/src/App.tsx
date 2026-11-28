@@ -2,7 +2,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { Activity, Dices, Gavel, Shield, Star } from 'lucide-react';
 import { AccuseBar } from './components/AccuseBar';
-import { ChausarBoard } from './components/ChausarBoard';
+import { DeadwoodBoard } from './components/DeadwoodBoard';
 import { DealerBanner } from './components/DealerBanner';
 import { DemoSwitcher } from './components/DemoSwitcher';
 import { DiceTray } from './components/DiceTray';
@@ -551,7 +551,7 @@ export default function App() {
         ) : (
           <div ref={tableGridRef} className="grid items-start gap-6 lg:grid-cols-12">
             <div className="table-enter lg:col-span-7">
-              <ChausarBoard
+              <DeadwoodBoard
                 pawns={game.pawns}
                 legalMoves={game.legalMoves}
                 lastMove={game.lastMove}
