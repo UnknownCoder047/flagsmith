@@ -58,19 +58,25 @@ Deploy `client/` directly as a static Vite app:
 
 ## Flagsmith Cloud Setup Checklist
 
-1. Create multivariate feature flag `sharper_tell_mode` with string variants:
-   - `silent_bias` (50%)
+1. Get both keys from **Environment Settings → SDK Keys** of the same environment:
+   - Client-side key → `client/.env` as `VITE_FLAGSMITH_ENV_KEY`.
+   - Server-side key (starts with `ser.`) → `scripts/.env` as `FLAGSMITH_SERVER_KEY` (simulator only).
+2. Create multivariate feature flag `sharper_tell_mode` (enabled) with string variants:
+   - `silent_bias` (control, 50%)
    - `subtle_tells` (50%)
-2. Create Experimentation metrics:
-   - `cheat_caught` (Occurrence, Higher is better — Primary)
-   - `play_again_clicked` (Occurrence, Higher is better — Secondary)
-   - `false_accusation` (Occurrence, Lower is better — Guardrail)
-   - `match_abandoned` (Occurrence, Lower is better — Guardrail)
+3. Create Experimentation metrics. The event name must match exactly and appears in the dropdown only after Flagsmith has received that event once (a few minutes), so play one match or run the simulator first. All are **Occurrence**:
+   - `cheat_caught` — Higher is better — Primary
+   - `play_again_clicked` — Higher is better — Secondary
+   - `false_accusation` — Lower is better — Guardrail
+   - `match_abandoned` — Lower is better — Guardrail
+   
+   Experiment hypothesis (paste into the experiment form):
+   > If we add subtle visual and narrative tells when the dealer rigs the dice (`subtle_tells`), more players will catch the cheat (`cheat_caught`) and replay (`play_again_clicked`) than with the current silent bias (`silent_bias`), without increasing false accusations (`false_accusation`) or abandoned matches (`match_abandoned`).
 3. Start the experiment on `sharper_tell_mode`.
 4. Add Identity Overrides for live judge demos:
    - `demo_silent` → `silent_bias`
    - `demo_tells` → `subtle_tells`
-5. *(Optional)* Verify your Bayesian dashboard end-to-end with the traffic simulator:
+5. *(Optional)* Verify your Bayesian dashboard end-to-end with the traffic simulator (results appear on the experiment's **Results** page; events can take a few minutes to ingest):
    ```bash
    cp scripts/.env.example scripts/.env
    # Add FLAGSMITH_SERVER_KEY=ser.xxxxx from a SEPARATE, non-production environment

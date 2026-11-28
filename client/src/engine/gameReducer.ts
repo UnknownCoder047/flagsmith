@@ -1,6 +1,7 @@
 import type { GameState, LegalMove, PlayerId, RollRecord, TellVariant } from '../types';
 import {
   applyMove,
+  buildMovePathCoords,
   createInitialPawns,
   getCoordForProgress,
   getLegalMoves,
@@ -81,6 +82,7 @@ function commitMove(state: GameState, actor: PlayerId, move: LegalMove) {
       pawnId: move.pawnId,
       fromCoord: getCoordForProgress(actor, move.fromProgress),
       toCoord: getCoordForProgress(actor, move.toProgress),
+      pathCoords: buildMovePathCoords(actor, move.fromProgress, move.toProgress),
       captured: Boolean(move.capturedPawnId),
     },
   } satisfies Partial<GameState>;
