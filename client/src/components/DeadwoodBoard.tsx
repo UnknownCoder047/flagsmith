@@ -9,6 +9,7 @@ import {
   HOME_PROGRESS,
   OUTER_TRACK_LENGTH,
 } from '../engine/board';
+import { playStepHop } from '../engine/sound';
 import { prefersReducedMotion } from '../lib/motion';
 import { PawnToken } from './PawnToken';
 
@@ -32,7 +33,9 @@ const TRACK_ARROWS: Record<string, string> = {
 function describeProgress(progress: number): string {
   if (progress < 0) return 'in the corral';
   if (progress >= HOME_PROGRESS) return 'in the Gold Vault';
-  if (progress >= OUTER_TRACK_LENGTH) return `in the home lane, step ${progress - OUTER_TRACK_LENGTH + 1} of 2`;
+  if (progress >= OUTER_TRACK_LENGTH) {
+    return `in the home lane, step ${progress - OUTER_TRACK_LENGTH + 1} of 2`;
+  }
   return `on track square ${progress + 1} of ${OUTER_TRACK_LENGTH}`;
 }
 
@@ -48,15 +51,16 @@ export function DeadwoodBoard({
 
   const stageRef = useRef<HTMLDivElement | null>(null);
   const slabRef = useRef<HTMLDivElement | null>(null);
+  const gridRef = useRef<HTMLDivElement | null>(null);
   const rotXToRef = useRef<((val: number) => void) | null>(null);
   const rotYToRef = useRef<((val: number) => void) | null>(null);
 
-  // Set up GSAP quickTo for silky 3D tabletop parallax tilt
+  // Set up GSAP quickTo for deeper 32-degree 3D tabletop parallax tilt
   useEffect(() => {
     const slab = slabRef.current;
     if (!slab) return;
     const prefersReduced = prefersReducedMotion();
-    const baseRotateX = is3DView && !prefersReduced ? 14 : 0;
+    const baseRotateX = is3DView && !prefersReduced ? 32 : 0;
 
     const ctx = gsap.context(() => {
       gsap.to(slab, {
@@ -82,57 +86,83 @@ export function DeadwoodBoard({
     };
   }, [is3DView]);
 
-  // Animate moved pawn hop + capture board recoil via GSAP
+  // Tile-by-tile 3D arc hopping + capture board recoil via GSAP
   useEffect(() => {
     if (!lastMove) return;
-    const prefersReduced = prefersReducedMotion();
-    if (prefersReduced) return;
+    if (prefersReducedMotion()) return;
 
     const ctx = gsap.context(() => {
       const movedEl = stageRef.current?.querySelector(
         `[data-pawn-id="${lastMove.pawnId}"]`,
       );
-      if (movedEl) {
-        gsap.fromTo(
-          movedEl,
-          { y: -22, scale: 1.32, rotationZ: -10 },
-          {
-            y: 0,
-            scale: 1,
-            rotationZ: 0,
-            duration: 0.48,
-            ease: 'bounce.out',
-          },
-        );
-      }
+      const gridEl = gridRef.current;
 
-      if (lastMove.captured && slabRef.current) {
-        gsap
-          .timeline()
-          .to(slabRef.current, {
-            x: -4,
-            y: 2,
-            duration: 0.055,
-            ease: 'power1.inOut',
-          })
-          .to(slabRef.current, {
-            x: 4,
-            y: -2,
-            duration: 0.055,
-            ease: 'power1.inOut',
-          })
-          .to(slabRef.current, {
-            x: -2,
-            y: 1,
-            duration: 0.055,
-            ease: 'power1.inOut',
-          })
-          .to(slabRef.current, {
-            x: 0,
-            y: 0,
-            duration: 0.14,
-            ease: 'power2.out',
-          });
+      if (movedEl && gridEl && lastMove.pathCoords.length >= 2) {
+        const cellW = gridEl.clientWidth / BOARD_SIZE;
+        const cellH = gridEl.clientHeight / BOARD_SIZE;
+        const dest = lastMove.pathCoords[lastMove.pathCoords.length - 1];
+
+        const offsetFor = ([r, c]: [number, number]) => ({
+          x: (c - dest[1]) * cellW,
+          y: (r - dest[0]) * cellH,
+        });
+
+        const start = offsetFor(lastMove.pathCoords[0]);
+        gsap.set(movedEl, { x: start.x, y: start.y, z: 0, scale: 1 });
+
+        const hopTl = gsap.timeline({
+          onComplete: () => {
+            gsap.set(movedEl, { clearProps: 'x,y,z,scale' });
+          },
+        });
+
+        const stepDur = 0.145;
+        for (let i = 1; i < lastMove.pathCoords.length; i++) {
+          const next = offsetFor(lastMove.pathCoords[i]);
+          const isFinal = i === lastMove.pathCoords.length - 1;
+          const startAt = (i - 1) * stepDur;
+
+          // Glide across the tile
+          hopTl.to(
+            movedEl,
+            { x: next.x, y: next.y, duration: stepDur, ease: 'power1.inOut' },
+            startAt,
+          );
+
+          // 3D arc jump up then land
+          hopTl.to(
+            movedEl,
+            {
+              z: isFinal ? 34 : 26,
+              scale: 1.18,
+              duration: stepDur * 0.48,
+              ease: 'power2.out',
+            },
+            startAt,
+          );
+          hopTl.to(
+            movedEl,
+            {
+              z: 0,
+              scale: 1,
+              duration: stepDur * 0.52,
+              ease: isFinal ? 'bounce.out' : 'power2.in',
+              onComplete: () => {
+                if (!isFinal) playStepHop(i);
+              },
+            },
+            startAt + stepDur * 0.48,
+          );
+        }
+
+        if (lastMove.captured && slabRef.current) {
+          const impactAt = (lastMove.pathCoords.length - 1) * stepDur;
+          hopTl
+            .to(slabRef.current, { x: -5, y: 3, duration: 0.05 }, impactAt)
+            .to(slabRef.current, { x: 5, y: -2, duration: 0.05 })
+            .to(slabRef.current, { x: -2, y: 1, duration: 0.05 })
+            .to(slabRef.current, { x: 0, y: 0, duration: 0.14, ease: 'power2.out' });
+        }
       }
     }, stageRef);
 
@@ -143,15 +173,15 @@ export function DeadwoodBoard({
     if (!is3DView || !stageRef.current || !rotXToRef.current || !rotYToRef.current) return;
     if (prefersReducedMotion()) return;
     const rect = stageRef.current.getBoundingClientRect();
-    const nx = (e.clientX - rect.left) / rect.width - 0.5; // -0.5..0.5
+    const nx = (e.clientX - rect.left) / rect.width - 0.5;
     const ny = (e.clientY - rect.top) / rect.height - 0.5;
-    rotXToRef.current(14 - ny * 7);
-    rotYToRef.current(nx * 8);
+    rotXToRef.current(32 - ny * 9);
+    rotYToRef.current(nx * 11);
   };
 
   const handleStageMouseLeave = () => {
     if (!is3DView || !rotXToRef.current || !rotYToRef.current) return;
-    rotXToRef.current(14);
+    rotXToRef.current(32);
     rotYToRef.current(0);
   };
 
@@ -201,6 +231,7 @@ export function DeadwoodBoard({
       pawn={pawn}
       move={legalMoveByPawn.get(pawn.id)}
       compact={compact}
+      is3DView={is3DView}
       isJustMoved={lastMove?.pawnId === pawn.id}
       onSelect={onSelectPawn}
       onHover={setHoveredPawnId}
@@ -219,6 +250,7 @@ export function DeadwoodBoard({
       >
         {pawns.map((p) => `${p.label} ${describeProgress(p.progress)}`).join('; ')}.
       </p>
+
       {/* Top Camera & Scoreboard Bar */}
       <div className="mb-2.5 flex items-center justify-between gap-2 px-1">
         <div className="flex items-center gap-2 rounded-lg border border-emerald-700/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-800 dark:border-emerald-400/25 dark:text-emerald-300">
@@ -254,17 +286,15 @@ export function DeadwoodBoard({
         ref={stageRef}
         onMouseMove={handleStageMouseMove}
         onMouseLeave={handleStageMouseLeave}
-        className="scene-3d py-1"
+        className="scene-3d pb-7 pt-2"
       >
         <div
           ref={slabRef}
           className="board-slab-3d relative rounded-2xl border-2 border-amber-900/45 bg-gradient-to-b from-[#d8c3a0] via-[#c7ad83] to-[#b09264] p-2.5 shadow-[0_26px_44px_-16px_rgba(20,10,4,0.62)] sm:p-3.5 dark:border-amber-500/35 dark:from-[#2d1e15] dark:via-[#1e140e] dark:to-[#130c08]"
         >
-          {/* Extruded Mahogany Thickness Lip */}
-          <div
-            aria-hidden="true"
-            className="board-edge-lip absolute inset-0 rounded-2xl border border-amber-950/60 bg-gradient-to-b from-[#785732] to-[#4a3219] dark:border-amber-900/40 dark:from-[#120b08] dark:to-[#070403]"
-          />
+          {/* Grounded tabletop shadow & 22px extruded mahogany front wall */}
+          <div aria-hidden="true" className="board-cast-shadow" />
+          <div aria-hidden="true" className="board-front-apron" />
 
           {/* Brass Corner Plates */}
           <span className="pointer-events-none absolute left-1.5 top-1.5 h-2.5 w-2.5 rounded-tl border-l-2 border-t-2 border-amber-400/70" />
@@ -273,7 +303,10 @@ export function DeadwoodBoard({
           <span className="pointer-events-none absolute bottom-1.5 right-1.5 h-2.5 w-2.5 rounded-br border-b-2 border-r-2 border-amber-400/70" />
 
           {/* 9x9 Cross Grid */}
-          <div className="preserve-3d relative grid aspect-square grid-cols-9 grid-rows-9 gap-1 rounded-xl bg-amber-950/15 p-1 shadow-[inset_0_3px_10px_rgba(0,0,0,0.35)] dark:bg-black/45">
+          <div
+            ref={gridRef}
+            className="preserve-3d relative grid aspect-square grid-cols-9 grid-rows-9 gap-1 rounded-xl bg-amber-950/15 p-1 shadow-[inset_0_3px_10px_rgba(0,0,0,0.35)] dark:bg-black/45"
+          >
             {Array.from({ length: BOARD_SIZE * BOARD_SIZE }, (_, idx) => {
               const row = Math.floor(idx / BOARD_SIZE);
               const col = idx % BOARD_SIZE;
@@ -286,13 +319,14 @@ export function DeadwoodBoard({
                 return (
                   <div
                     key="gold-vault-center"
-                    style={{ transform: 'translateZ(10px)' }}
-                    className={`preserve-3d col-span-3 row-span-3 flex flex-col items-center justify-center rounded-xl border-2 bg-gradient-to-br from-amber-100 via-amber-50 to-amber-200/80 p-2 text-center shadow-[0_8px_16px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all dark:from-[#3a2816] dark:via-[#261a0f] dark:to-[#181009] ${
+                    style={{ transform: 'translateZ(14px)' }}
+                    className={`preserve-3d relative col-span-3 row-span-3 flex flex-col items-center justify-center rounded-xl border-2 bg-gradient-to-br from-amber-100 via-amber-50 to-amber-200/80 p-2 text-center shadow-[0_8px_16px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all dark:from-[#3a2816] dark:via-[#261a0f] dark:to-[#181009] ${
                       isHomeTarget
                         ? 'border-emerald-400 ring-2 ring-emerald-400/80'
                         : 'border-amber-500/70'
                     }`}
                   >
+                    <div aria-hidden="true" className="vault-front-skirt" />
                     <Vault className="mb-0.5 h-4 w-4 text-amber-700 dark:text-amber-300" />
                     <span className="type-broadsheet font-display text-xs uppercase tracking-wider text-amber-950 dark:text-amber-200">
                       Gold Vault
@@ -331,18 +365,32 @@ export function DeadwoodBoard({
                 );
               }
 
-              // Bottom-Left 3x3 corner = Player Corral
+              // Bottom-Left 3x3 corner = Player Corral (entire corral clickable when 1 camp rider is playable)
               if (row === 6 && col === 0) {
-                const hasPlayableCampPawn = playerCorralPawns.some((p) =>
+                const playableCampPawns = playerCorralPawns.filter((p) =>
                   legalMoveByPawn.has(p.id),
                 );
+                const singleCampPawn =
+                  playableCampPawns.length === 1 ? playableCampPawns[0] : null;
                 return (
                   <div
                     key="player-corral"
-                    className={`preserve-3d col-span-3 row-span-3 flex flex-col items-center justify-center rounded-xl border p-2 shadow-[inset_0_4px_10px_rgba(0,0,0,0.28)] transition-colors ${
-                      hasPlayableCampPawn
-                        ? 'border-emerald-500/75 bg-emerald-500/15'
-                        : 'border-emerald-900/25 bg-emerald-950/10 dark:border-emerald-500/25 dark:bg-emerald-950/25'
+                    onClick={
+                      singleCampPawn
+                        ? () => {
+                            setHoveredPawnId(null);
+                            onSelectPawn(singleCampPawn.id);
+                          }
+                        : undefined
+                    }
+                    onMouseEnter={
+                      singleCampPawn ? () => setHoveredPawnId(singleCampPawn.id) : undefined
+                    }
+                    onMouseLeave={singleCampPawn ? () => setHoveredPawnId(null) : undefined}
+                    className={`preserve-3d relative col-span-3 row-span-3 flex flex-col items-center justify-center rounded-xl border p-2 shadow-[inset_0_4px_10px_rgba(0,0,0,0.28)] transition-colors ${
+                      playableCampPawns.length > 0
+                        ? 'z-30 cursor-pointer border-emerald-500/75 bg-emerald-500/15'
+                        : 'z-0 border-emerald-900/25 bg-emerald-950/10 dark:border-emerald-500/25 dark:bg-emerald-950/25'
                     }`}
                   >
                     <span className="font-display text-[11px] font-bold uppercase tracking-wider text-stone-950 dark:text-emerald-300">
@@ -401,6 +449,8 @@ export function DeadwoodBoard({
               const cellKey = `${row},${col}`;
               const cellPawns = pawnsByCell.get(cellKey) ?? [];
               const arrow = TRACK_ARROWS[cellKey];
+              const playableInCell = cellPawns.filter((p) => legalMoveByPawn.has(p.id));
+              const singlePlayablePawn = playableInCell.length === 1 ? playableInCell[0] : null;
 
               const isPreviewTarget =
                 previewTargetCoord !== null &&
@@ -453,11 +503,28 @@ export function DeadwoodBoard({
               return (
                 <div
                   key={cellKey}
-                  className={`preserve-3d relative flex items-center justify-center rounded-md border transition-all ${bgClass} ${highlightRing}`}
+                  onClick={
+                    singlePlayablePawn
+                      ? () => {
+                          setHoveredPawnId(null);
+                          onSelectPawn(singlePlayablePawn.id);
+                        }
+                      : undefined
+                  }
+                  onMouseEnter={
+                    singlePlayablePawn ? () => setHoveredPawnId(singlePlayablePawn.id) : undefined
+                  }
+                  onMouseLeave={singlePlayablePawn ? () => setHoveredPawnId(null) : undefined}
+                  className={`preserve-3d relative flex items-center justify-center rounded-md border transition-all ${bgClass} ${highlightRing} ${
+                    playableInCell.length > 0 ? 'z-30 cursor-pointer' : 'z-0'
+                  }`}
                 >
                   {cellPawns.length === 0 &&
                     (kind === 'safe' || kind === 'player_entry' || kind === 'dealer_entry') && (
-                      <span aria-hidden="true" className="pointer-events-none text-xs text-amber-800 dark:text-amber-300/75">
+                      <span
+                        aria-hidden="true"
+                        className="pointer-events-none text-xs text-amber-800 dark:text-amber-300/75"
+                      >
                         ★
                       </span>
                     )}
@@ -467,7 +534,10 @@ export function DeadwoodBoard({
                     kind !== 'player_entry' &&
                     kind !== 'dealer_entry' &&
                     arrow && (
-                      <span aria-hidden="true" className="pointer-events-none font-mono text-[10px] text-stone-500/75 dark:text-amber-200/35">
+                      <span
+                        aria-hidden="true"
+                        className="pointer-events-none font-mono text-[10px] text-stone-500/75 dark:text-amber-200/35"
+                      >
                         {arrow}
                       </span>
                     )}

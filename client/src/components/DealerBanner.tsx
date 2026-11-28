@@ -78,7 +78,9 @@ export function DealerBanner({
             <History className="h-3 w-3" />
             Table Roll Log
           </span>
-          <span className="type-tabular font-mono">{rollHistory.length} rolls</span>
+          <span className="type-tabular font-mono">
+            {flaggedRollIds.length} flagged · {rollHistory.length} rolls
+          </span>
         </div>
 
         {rollHistory.length === 0 ? (
@@ -86,13 +88,18 @@ export function DealerBanner({
             Watch the rolls closely once the stakes rise…
           </p>
         ) : (
-          <ul aria-label="Table roll log" className="max-h-40 space-y-1.5 overflow-y-auto pr-1">
+          <ul aria-label="Table roll log" className="max-h-44 space-y-1.5 overflow-y-auto pr-1">
             {rollHistory.map((item) => {
               const isDealer = item.actor === 'dealer';
+              const isFlagged = flaggedRollIds.includes(item.id);
               return (
                 <li
                   key={item.id}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-amber-900/15 bg-white/70 px-2.5 py-1.5 text-[11px] dark:border-stone-800 dark:bg-[#110b08]"
+                  className={`flex items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] transition-colors ${
+                    isFlagged
+                      ? 'border-red-500/50 bg-red-50/90 dark:border-red-500/45 dark:bg-red-950/35'
+                      : 'border-amber-900/15 bg-white/70 dark:border-stone-800 dark:bg-[#110b08]'
+                  }`}
                 >
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="type-tabular font-mono text-[10px] text-stone-500">
@@ -117,18 +124,16 @@ export function DealerBanner({
                     <button
                       type="button"
                       onClick={() => onToggleFlag(item.id)}
-                      aria-pressed={flaggedRollIds.includes(item.id)}
+                      aria-pressed={isFlagged}
                       aria-label={`Mark turn ${item.turn} roll ${item.roll} suspicious`}
-                      title="Mark as suspicious"
-                      className={`rounded p-0.5 transition-colors focus-visible:ring-2 focus-visible:ring-red-500 ${
-                        flaggedRollIds.includes(item.id)
-                          ? 'text-red-600 dark:text-red-400'
-                          : 'text-stone-400 hover:text-red-600 dark:text-stone-600 dark:hover:text-red-400'
+                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-[10px] font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-red-500 ${
+                        isFlagged
+                          ? 'border-red-500/75 bg-red-600/20 text-red-700 dark:text-red-300'
+                          : 'border-amber-800/30 bg-amber-50/80 text-stone-700 hover:border-red-500/60 hover:text-red-700 dark:border-amber-500/25 dark:bg-stone-900 dark:text-stone-300 dark:hover:border-red-500/60 dark:hover:text-red-300'
                       }`}
                     >
-                      <Flag
-                        className={`h-3.5 w-3.5 ${flaggedRollIds.includes(item.id) ? 'fill-current' : ''}`}
-                      />
+                      <Flag className={`h-3 w-3 ${isFlagged ? 'fill-current' : ''}`} />
+                      <span>{isFlagged ? 'Flagged' : 'Flag'}</span>
                     </button>
                     <span className="type-tabular inline-flex items-center rounded border border-amber-800/20 bg-amber-100/80 px-1.5 py-0.5 font-mono text-[11px] font-bold text-stone-900 dark:border-amber-500/20 dark:bg-stone-800 dark:text-amber-200">
                       {item.roll}

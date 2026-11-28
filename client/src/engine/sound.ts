@@ -104,3 +104,9 @@ export function playVerdict(won: boolean): void {
     playTone(196, 0.42, 'sine', 0.09, 0.32);
   }
 }
+
+/** Light wooden click for each intermediate tile hop */
+export function playStepHop(stepIndex: number): void {
+  const pitch = 230 + Math.min(stepIndex, 6) * 24;
+  playTone(pitch, 0.04, 'triangle', 0.055, 0, pitch * 0.65);
+}

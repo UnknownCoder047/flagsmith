@@ -49,6 +49,7 @@ export interface LastMoveTrace {
   pawnId: string;
   fromCoord: [number, number] | null;
   toCoord: [number, number] | null;
+  pathCoords: Array<[number, number]>;
   captured: boolean;
 }
 

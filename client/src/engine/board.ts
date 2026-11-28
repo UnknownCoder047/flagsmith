@@ -181,3 +181,31 @@ export function getCellKind(
 
   return 'track';
 }
+
+export function buildMovePathCoords(
+  owner: PlayerId,
+  fromProgress: number,
+  toProgress: number,
+): Array<[number, number]> {
+  const path: Array<[number, number]> = [];
+  const startCoord: [number, number] | null =
+    fromProgress === -1
+      ? owner === 'player'
+        ? [7, 1]
+        : [1, 7]
+      : getCoordForProgress(owner, fromProgress);
+
+  if (startCoord) path.push(startCoord);
+
+  const firstStep = fromProgress === -1 ? 0 : fromProgress + 1;
+  for (let step = firstStep; step <= toProgress; step++) {
+    if (step === HOME_PROGRESS) {
+      path.push([4, 4]);
+    } else {
+      const coord = getCoordForProgress(owner, step);
+      if (coord) path.push(coord);
+    }
+  }
+
+  return path;
+}
