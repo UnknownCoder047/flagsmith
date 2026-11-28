@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { BookOpen, ChevronDown, ChevronUp, Dices, Gavel, Shield, Vault } from 'lucide-react';
 
 export function InGameRulesCard() {
-  const [collapsed, setCollapsed] = useState(false);
+  // Collapsed by default on phones so the dice tray stays near the board, above the fold.
+  const [collapsed, setCollapsed] = useState(() => window.matchMedia('(max-width: 1023px)').matches);
 
   return (
     <section className="plaque-3d mx-auto mt-4 w-full max-w-[515px] rounded-2xl p-3.5">
